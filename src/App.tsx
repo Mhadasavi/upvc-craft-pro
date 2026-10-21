@@ -575,10 +575,21 @@ export default function App() {
             <DashboardView
               quotations={quotations}
               customers={customers}
+              invoices={invoices}
               searchQuery={searchQuery}
               onNavigateNewQuote={handleStartFreshQuote}
               onViewQuote={handleEditQuoteInBuilder}
               onSendWhatsApp={handleSendWhatsAppForQuote}
+              onNavigateTab={handleSelectTab}
+              onAddNewCustomer={handleAddNewCustomer}
+              onAddPayment={handleAddPayment}
+              onUpdateQuoteStatus={handleUpdateQuoteStatus}
+              onConvertToInvoice={(q) => {
+                setActiveQuoteNumber(q.quoteNumber);
+                setCurrentCustomer(q.customer);
+                setQuotationItems([...q.items]);
+                handleFinalizeInvoice();
+              }}
             />
           )}
 
