@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import {
   BusinessProfile,
   Customer,
+  ExtraCharge,
   ItemAccessories,
   MeasurementUnit,
   OpeningDirection,
@@ -52,6 +53,10 @@ import {
   ChevronRight,
   ShieldCheck,
   Check,
+  Truck,
+  Trash2,
+  Tag,
+  PlusCircle,
 } from 'lucide-react';
 import { lookupGstDetails, parseGstinStructure } from '../../utils/gstLookup';
 import { formatINR } from '../../utils/calculations';
@@ -66,12 +71,14 @@ interface NewQuotationBuilderProps {
   profile: BusinessProfile;
   rateSheet: RateSheetItem[];
   initialStep?: 1 | 2 | 3;
+  initialExtraCharges?: ExtraCharge[];
   onUpdateCustomer: (customer: Customer) => void;
   onAddNewCustomer: (customer: Customer) => void;
   onUpdateItems: (items: QuotationItem[]) => void;
+  onUpdateExtraCharges?: (charges: ExtraCharge[]) => void;
   onUpdateQuoteDate?: (date: string) => void;
   onUpdateValidUntil?: (validUntil: string) => void;
-  onSaveQuotation?: (status?: QuotationStatus, customDate?: string, customValidUntil?: string) => void;
+  onSaveQuotation?: (status?: QuotationStatus, customDate?: string, customValidUntil?: string, extraCharges?: ExtraCharge[]) => void;
   onSendWhatsApp: () => void;
   onFinalizeInvoice: () => void;
 }
@@ -86,9 +93,11 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
   profile,
   rateSheet,
   initialStep = 1,
+  initialExtraCharges = [],
   onUpdateCustomer,
   onAddNewCustomer,
   onUpdateItems,
+  onUpdateExtraCharges,
   onUpdateQuoteDate,
   onUpdateValidUntil,
   onSaveQuotation,
@@ -103,6 +112,16 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
       setCurrentStep(initialStep);
     }
   }, [initialStep]);
+
+  // Extra charges state (Transportation, Crane, Scaffolding, Custom line items)
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>(() => initialExtraCharges || []);
+  const [fittingRatePerSqFt, setFittingRatePerSqFt] = useState<number>(40);
+
+  useEffect(() => {
+    if (initialExtraCharges) {
+      setExtraCharges(initialExtraCharges);
+    }
+  }, [initialExtraCharges]);
 
   // Step 1: Customer Search & Quick Registration
   const [customerSearch, setCustomerSearch] = useState('');
@@ -174,17 +193,78 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
 
   let materialBaseTotal = 0;
   let siteFittingTotal = 0;
-  let subtotal = 0;
+  let baseItemsSubtotal = 0;
 
   items.forEach((item) => {
-    subtotal += item.itemTotal;
-    const itemFitting = item.accessories.siteFitting ? item.totalAreaSqFt * 40 : 0;
+    baseItemsSubtotal += item.itemTotal;
+    const fittingRate =
+      item.fittingCostPerSqFt !== undefined
+        ? item.fittingCostPerSqFt
+        : item.accessories.siteFitting
+        ? 40
+        : 0;
+    const itemFitting = item.accessories.siteFitting ? item.totalAreaSqFt * fittingRate : 0;
     siteFittingTotal += itemFitting;
     materialBaseTotal += item.itemTotal - itemFitting;
   });
 
+  const extraChargesTotal = extraCharges.reduce(
+    (sum, c) => sum + (Number(c.amount) || 0),
+    0
+  );
+  const subtotal = Math.round((materialBaseTotal + siteFittingTotal + extraChargesTotal) * 100) / 100;
   const gstAmount = Math.round(subtotal * 0.18 * 100) / 100;
-  const grandTotal = subtotal + gstAmount;
+  const grandTotal = Math.round((subtotal + gstAmount) * 100) / 100;
+
+  // Extra charges helpers
+  const handleAddExtraCharge = (label = '', amount = 0) => {
+    const newCharge: ExtraCharge = {
+      id: `charge-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+      label,
+      amount,
+    };
+    const updated = [...extraCharges, newCharge];
+    setExtraCharges(updated);
+    if (onUpdateExtraCharges) onUpdateExtraCharges(updated);
+  };
+
+  const handleUpdateExtraCharge = (id: string, field: 'label' | 'amount', value: any) => {
+    const updated = extraCharges.map((c) =>
+      c.id === id ? { ...c, [field]: field === 'amount' ? Number(value) : value } : c
+    );
+    setExtraCharges(updated);
+    if (onUpdateExtraCharges) onUpdateExtraCharges(updated);
+  };
+
+  const handleRemoveExtraCharge = (id: string) => {
+    const updated = extraCharges.filter((c) => c.id !== id);
+    setExtraCharges(updated);
+    if (onUpdateExtraCharges) onUpdateExtraCharges(updated);
+  };
+
+  // Global 1-click Waive or Restore Fitting Fee
+  const handleToggleWaiveAllFitting = (waive: boolean) => {
+    const newRate = waive ? 0 : 40;
+    const updatedItems = items.map((item) => {
+      if (!item.accessories.siteFitting) return item;
+      const cost = calculateItemCost(
+        item.areaPerUnitSqFt,
+        item.quantity,
+        item.ratePerSqFt,
+        item.hardwareCostPerUnit,
+        item.accessories,
+        newRate
+      );
+      return {
+        ...item,
+        fittingCostPerSqFt: newRate,
+        subtotal: cost.subtotal,
+        gstAmount: cost.gstAmount,
+        itemTotal: cost.subtotal,
+      };
+    });
+    onUpdateItems(updatedItems);
+  };
 
   // Filter existing customers by search query
   const filteredCustomers = allCustomers.filter((c) => {
@@ -271,7 +351,8 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
     quantity,
     baseRatePerSqFt,
     accessories.crescentLock ? 600 : 300,
-    accessories
+    accessories,
+    accessories.siteFitting ? fittingRatePerSqFt : 0
   );
 
   // Keyboard shortcut Ctrl+Enter to quickly add item
@@ -377,7 +458,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
       accessories: { ...accessories },
       ratePerSqFt: baseRatePerSqFt,
       hardwareCostPerUnit: accessories.crescentLock ? 600 : 300,
-      fittingCostPerSqFt: accessories.siteFitting ? 40 : 0,
+      fittingCostPerSqFt: accessories.siteFitting ? fittingRatePerSqFt : 0,
       meshCostPerSqFt: accessories.mosquitoMesh ? 35 : 0,
       subtotal: costBreakdown.subtotal,
       gstAmount: costBreakdown.gstAmount,
@@ -479,6 +560,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
     setProfileBrand(item.profileBrand);
     setColorFoil(item.colorFoil);
     setAccessories({ ...item.accessories });
+    setFittingRatePerSqFt(item.fittingCostPerSqFt !== undefined ? item.fittingCostPerSqFt : 40);
     setTrackCount(item.trackCount || 2);
     setPanelCount(item.panelCount || 2);
     setOpeningDirection(item.openingDirection || 'slide-left');
@@ -618,7 +700,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
         <div className="flex items-center gap-2">
           {onSaveQuotation && (
             <button
-              onClick={() => onSaveQuotation('draft', currentQuoteDate, currentValidUntil)}
+              onClick={() => onSaveQuotation('draft', currentQuoteDate, currentValidUntil, extraCharges)}
               className="h-8 px-3.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold flex items-center gap-1.5 transition-colors shadow-xs cursor-pointer"
               type="button"
             >
@@ -1128,6 +1210,8 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
                 onUpdateProfileBrand={setProfileBrand}
                 onUpdateColorFoil={setColorFoil}
                 onToggleAccessory={handleToggleAccessory}
+                fittingRatePerSqFt={fittingRatePerSqFt}
+                onUpdateFittingRate={setFittingRatePerSqFt}
                 onUpdateTrackCount={setTrackCount}
                 onUpdatePanelCount={setPanelCount}
                 onUpdateOpeningDirection={setOpeningDirection}
@@ -1202,12 +1286,132 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
             </button>
           </div>
 
+          {/* Additional / Custom Charges Panel (Transportation, Crane, Scaffolding, Custom line items) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-3.5 mt-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Additional Charges &amp; Transportation</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Add freight, crane lifting, scaffolding, loading/unloading, or custom line items to this quotation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {extraCharges.length > 0 && (
+                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    Total Extra: {formatINR(extraChargesTotal)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Transportation / Freight Charges', 1500)}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>+ Add Charge</span>
+                </button>
+              </div>
+            </div>
+
+            {/* If no extra charges added yet: show quick chips */}
+            {extraCharges.length === 0 ? (
+              <div className="flex flex-wrap items-center gap-2 py-1">
+                <span className="text-[11px] text-slate-400 font-medium mr-1">Quick add presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Transportation & Freight', 1500)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 hover:text-amber-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Truck className="w-3 h-3 text-amber-600" />
+                  <span>+ Transportation (₹1,500)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Loading & Unloading Charges', 800)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 hover:text-blue-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ Loading &amp; Unloading (₹800)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Crane / High-Rise Hoisting Charges', 2500)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 hover:text-purple-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ Crane / Hoisting (₹2,500)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('', 0)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Tag className="w-3 h-3 text-slate-500" />
+                  <span>+ Custom Text &amp; Value...</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {extraCharges.map((charge, idx) => (
+                  <div key={charge.id} className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
+                    <span className="font-mono text-[11px] font-bold text-slate-400 w-5 text-center">#{idx + 1}</span>
+                    <input
+                      type="text"
+                      value={charge.label}
+                      onChange={(e) => handleUpdateExtraCharge(charge.id, 'label', e.target.value)}
+                      placeholder="e.g. Transportation / Tempo charges to site..."
+                      className="flex-1 h-8 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 h-8">
+                      <span className="font-mono text-xs text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={charge.amount || ''}
+                        onChange={(e) => handleUpdateExtraCharge(charge.id, 'amount', e.target.value)}
+                        placeholder="0"
+                        className="w-24 font-mono text-xs font-bold text-slate-900 bg-transparent focus:outline-none text-right"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExtraCharge(charge.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Remove charge"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddExtraCharge('', 0)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+ Add Another Custom Charge</span>
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Standard 18% GST applies to additional charges.
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Fixed Quotation Summary & Action Card at the end of Quotation Table (like Invoice) */}
           <SummaryBar
             items={items}
             customerName={customer.name}
             validUntilDate={currentValidUntil}
-            onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil)}
+            extraCharges={extraCharges}
+            onToggleWaiveFitting={handleToggleWaiveAllFitting}
+            onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil, extraCharges)}
             onSavePdf={() => setIsPrintQuoteOpen(true)}
             onSendWhatsApp={onSendWhatsApp}
             onFinalizeInvoice={onFinalizeInvoice}
@@ -1320,9 +1524,26 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
                 </div>
 
                 <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Site Fitting &amp; Weather Seal</span>
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-slate-500">Site Fitting &amp; Weather Seal</span>
+                    {items.some((i) => i.accessories.siteFitting) && siteFittingTotal === 0 && (
+                      <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                        Free / Waived
+                      </span>
+                    )}
+                  </div>
                   <span className="font-mono font-semibold text-slate-800">{formatINR(siteFittingTotal)}</span>
                 </div>
+
+                {extraCharges.map((c) => (
+                  <div key={c.id} className="flex items-center justify-between text-xs text-amber-900 bg-amber-50/70 px-2 py-1 rounded-lg">
+                    <span className="flex items-center gap-1 font-medium truncate max-w-[200px]">
+                      <Truck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      {c.label || 'Additional Charge'}
+                    </span>
+                    <span className="font-mono font-bold">{formatINR(c.amount)}</span>
+                  </div>
+                ))}
 
                 <div className="h-px bg-slate-100 my-1" />
 
@@ -1352,12 +1573,132 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
             </div>
           </div>
 
+          {/* Additional / Custom Charges Panel (Transportation, Crane, Scaffolding, Custom line items) */}
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-3.5 mt-3">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
+              <div className="flex items-center gap-2">
+                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
+                  <Truck className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-bold text-slate-900">Additional Charges &amp; Transportation</h3>
+                  <p className="text-[11px] text-slate-500">
+                    Add freight, crane lifting, scaffolding, loading/unloading, or custom line items to this quotation.
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {extraCharges.length > 0 && (
+                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
+                    Total Extra: {formatINR(extraChargesTotal)}
+                  </span>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Transportation / Freight Charges', 1500)}
+                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
+                >
+                  <PlusCircle className="w-3.5 h-3.5" />
+                  <span>+ Add Charge</span>
+                </button>
+              </div>
+            </div>
+
+            {/* If no extra charges added yet: show quick chips */}
+            {extraCharges.length === 0 ? (
+              <div className="flex flex-wrap items-center gap-2 py-1">
+                <span className="text-[11px] text-slate-400 font-medium mr-1">Quick add presets:</span>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Transportation & Freight', 1500)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 hover:text-amber-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Truck className="w-3 h-3 text-amber-600" />
+                  <span>+ Transportation (₹1,500)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Loading & Unloading Charges', 800)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 hover:text-blue-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ Loading &amp; Unloading (₹800)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Crane / High-Rise Hoisting Charges', 2500)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 hover:text-purple-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <span>+ Crane / Hoisting (₹2,500)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('', 0)}
+                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+                >
+                  <Tag className="w-3 h-3 text-slate-500" />
+                  <span>+ Custom Text &amp; Value...</span>
+                </button>
+              </div>
+            ) : (
+              <div className="flex flex-col gap-2">
+                {extraCharges.map((charge, idx) => (
+                  <div key={charge.id} className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
+                    <span className="font-mono text-[11px] font-bold text-slate-400 w-5 text-center">#{idx + 1}</span>
+                    <input
+                      type="text"
+                      value={charge.label}
+                      onChange={(e) => handleUpdateExtraCharge(charge.id, 'label', e.target.value)}
+                      placeholder="e.g. Transportation / Tempo charges to site..."
+                      className="flex-1 h-8 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    />
+                    <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 h-8">
+                      <span className="font-mono text-xs text-slate-400">₹</span>
+                      <input
+                        type="number"
+                        min="0"
+                        step="1"
+                        value={charge.amount || ''}
+                        onChange={(e) => handleUpdateExtraCharge(charge.id, 'amount', e.target.value)}
+                        placeholder="0"
+                        className="w-24 font-mono text-xs font-bold text-slate-900 bg-transparent focus:outline-none text-right"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveExtraCharge(charge.id)}
+                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                      title="Remove charge"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                ))}
+
+                <div className="flex items-center justify-between pt-1">
+                  <button
+                    type="button"
+                    onClick={() => handleAddExtraCharge('', 0)}
+                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
+                  >
+                    <span>+ Add Another Custom Charge</span>
+                  </button>
+                  <span className="text-[11px] text-slate-400">
+                    Standard 18% GST applies to additional charges.
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+
           {/* Fixed Quotation Summary & Action Card at the end of Quotation Table (like Invoice) */}
           <SummaryBar
             items={items}
             customerName={customer.name}
             validUntilDate={currentValidUntil}
-            onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil)}
+            extraCharges={extraCharges}
+            onToggleWaiveFitting={handleToggleWaiveAllFitting}
+            onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil, extraCharges)}
             onSavePdf={() => setIsPrintQuoteOpen(true)}
             onSendWhatsApp={onSendWhatsApp}
             onFinalizeInvoice={onFinalizeInvoice}
@@ -1391,6 +1732,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
         customer={customer}
         items={items}
         profile={profile}
+        extraCharges={extraCharges}
       />
     </div>
   );

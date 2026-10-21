@@ -75,7 +75,8 @@ export function calculateItemCost(
     siteFitting: boolean;
     steelReinforcement: boolean;
     georgianBars: boolean;
-  }
+  },
+  customFittingCostPerSqFt?: number
 ): {
   materialBase: number;
   hardwareTotal: number;
@@ -98,7 +99,8 @@ export function calculateItemCost(
 
   const materialBase = totalArea * effectiveRate;
   const hardwareTotal = quantity * hardwareCostPerUnit;
-  const fittingTotal = accessories.siteFitting ? totalArea * 40 : 0;
+  const fittingRate = customFittingCostPerSqFt !== undefined ? customFittingCostPerSqFt : 40;
+  const fittingTotal = accessories.siteFitting ? totalArea * fittingRate : 0;
   const meshTotal = accessories.mosquitoMesh ? totalArea * 35 : 0;
 
   const subtotal = Math.round((materialBase + hardwareTotal + fittingTotal + meshTotal) * 100) / 100;

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
   BusinessProfile,
   Customer,
+  ExtraCharge,
   Invoice,
   PaymentRecord,
   Quotation,
@@ -27,6 +28,7 @@ import {
   ShieldCheck,
   CreditCard,
   FileCheck,
+  Truck,
 } from 'lucide-react';
 
 interface CreateInvoiceViewProps {
@@ -121,6 +123,29 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
     },
   ]);
 
+  // Extra charges state (Transportation, Crane, Loading/Unloading, Custom)
+  const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>([]);
+  const [customChargeLabel, setCustomChargeLabel] = useState('');
+  const [customChargeAmount, setCustomChargeAmount] = useState<number>(0);
+  const [showAddChargeForm, setShowAddChargeForm] = useState(false);
+
+  const handleAddExtraCharge = (label: string, amount: number) => {
+    if (!label.trim() || amount <= 0) return;
+    const newCharge: ExtraCharge = {
+      id: `charge-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+      label: label.trim(),
+      amount: Math.round(amount),
+    };
+    setExtraCharges((prev) => [...prev, newCharge]);
+    setCustomChargeLabel('');
+    setCustomChargeAmount(0);
+    setShowAddChargeForm(false);
+  };
+
+  const handleRemoveExtraCharge = (id: string) => {
+    setExtraCharges((prev) => prev.filter((c) => c.id !== id));
+  };
+
   // Payment states
   const [advanceAmount, setAdvanceAmount] = useState<number>(15000);
   const [paymentMode, setPaymentMode] = useState<'UPI' | 'NEFT' | 'Cash' | 'Cheque'>('UPI');
@@ -189,6 +214,9 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
         handleGstChange(quote.customer.gstin);
       }
 
+      // Populate extra charges if any
+      setExtraCharges(quote.extraCharges ? [...quote.extraCharges] : []);
+
       // Populate items
       setInvoiceItems(
         quote.items.map((i) => ({
@@ -231,7 +259,9 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
   };
 
   // Tax calculations
-  const subtotal = invoiceItems.reduce((acc, i) => acc + i.amount, 0);
+  const itemsSubtotal = invoiceItems.reduce((acc, i) => acc + i.amount, 0);
+  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const subtotal = itemsSubtotal + extraChargesTotal;
   const isInterState = customerState && customerState !== 'Maharashtra';
   const gstAmount = Math.round(subtotal * 0.18 * 100) / 100;
   const grandTotal = subtotal + gstAmount;
@@ -331,6 +361,7 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
         profileSeries: '60mm Series',
         reinforcementThickness: '1.2mm GI',
       })),
+      extraCharges: extraCharges.length > 0 ? extraCharges : undefined,
       totalAmount: grandTotal,
       advanceReceived: advanceAmount,
       balanceDue,
@@ -688,12 +719,125 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
             </div>
           </div>
 
+          {/* Additional Charges & Freight Card */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-4 flex flex-col gap-3">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                <Truck className="w-4 h-4 text-amber-600" />
+                Additional Charges &amp; Transportation ({extraCharges.length})
+              </span>
+              <div className="flex flex-wrap items-center gap-1">
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Transportation / Freight', 1500)}
+                  className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  + Transport (₹1,500)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Loading & Unloading', 800)}
+                  className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  + Loading (₹800)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge('Crane / Hoisting Lifting', 2500)}
+                  className="px-2 py-1 rounded bg-amber-50 hover:bg-amber-100 text-amber-800 border border-amber-200 text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  + Hoisting (₹2,500)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddChargeForm(!showAddChargeForm)}
+                  className="px-2 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-[11px] font-bold transition-colors cursor-pointer"
+                >
+                  {showAddChargeForm ? 'Cancel' : '+ Custom Fee'}
+                </button>
+              </div>
+            </div>
+
+            {showAddChargeForm && (
+              <div className="p-2.5 bg-amber-50/60 rounded-lg border border-amber-200 flex flex-wrap items-center gap-2 text-xs">
+                <input
+                  type="text"
+                  placeholder="Charge description (e.g. Scaffolding, Wall Chipping)..."
+                  className="flex-1 min-w-40 h-8 px-2.5 rounded border border-amber-300 bg-white text-slate-900"
+                  value={customChargeLabel}
+                  onChange={(e) => setCustomChargeLabel(e.target.value)}
+                />
+                <div className="relative">
+                  <span className="absolute left-2.5 top-1.5 text-slate-400 font-bold">₹</span>
+                  <input
+                    type="number"
+                    min="0"
+                    placeholder="Amount"
+                    className="w-28 h-8 pl-6 pr-2 rounded border border-amber-300 bg-white font-mono font-bold text-slate-900"
+                    value={customChargeAmount || ''}
+                    onChange={(e) => setCustomChargeAmount(parseFloat(e.target.value) || 0)}
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={() => handleAddExtraCharge(customChargeLabel, customChargeAmount)}
+                  className="h-8 px-3 rounded bg-amber-600 text-white font-bold text-xs hover:bg-amber-700 transition-colors cursor-pointer"
+                >
+                  Add Charge
+                </button>
+              </div>
+            )}
+
+            {extraCharges.length > 0 ? (
+              <div className="divide-y divide-slate-100 border border-slate-100 rounded-lg overflow-hidden">
+                {extraCharges.map((charge) => (
+                  <div key={charge.id} className="py-2 px-3 bg-slate-50/60 flex items-center justify-between text-xs">
+                    <span className="font-medium text-slate-800 flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+                      {charge.label}
+                    </span>
+                    <div className="flex items-center gap-3">
+                      <span className="font-mono font-bold text-slate-900">₹{charge.amount.toLocaleString('en-IN')}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExtraCharge(charge.id)}
+                        className="text-slate-400 hover:text-red-600 p-0.5 cursor-pointer"
+                        title="Remove charge"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="text-[11px] text-slate-400 italic">
+                No additional freight, lifting, or miscellaneous charges added. Click presets above if needed.
+              </div>
+            )}
+          </div>
+
           {/* GST Calculation & Advance Ledger Card */}
           <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-5 flex flex-col gap-4 text-xs font-mono">
             <div className="flex justify-between items-center text-slate-700">
               <span className="font-sans font-semibold">Material &amp; Fabrication Subtotal:</span>
-              <span className="font-bold text-slate-900">{formatINR(subtotal)}</span>
+              <span className="font-bold text-slate-900">{formatINR(itemsSubtotal)}</span>
             </div>
+
+            {extraCharges.length > 0 && (
+              <div className="space-y-1 py-1 border-t border-dashed border-slate-200">
+                {extraCharges.map((c) => (
+                  <div key={c.id} className="flex justify-between items-center text-slate-600">
+                    <span className="font-sans text-[11px] text-amber-800">+ {c.label}:</span>
+                    <span className="font-bold text-amber-900">₹{(Number(c.amount) || 0).toLocaleString('en-IN')}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between items-center text-slate-700 pt-1 font-semibold">
+                  <span className="font-sans">Taxable Value (Subtotal):</span>
+                  <span className="font-bold text-slate-900">{formatINR(subtotal)}</span>
+                </div>
+              </div>
+            )}
 
             {!isInterState ? (
               <>

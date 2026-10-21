@@ -1,4 +1,4 @@
-import { BusinessProfile, Customer, Invoice, Quotation, QuotationItem, WorkshopCutItem } from '../types';
+import { BusinessProfile, Customer, ExtraCharge, Invoice, Quotation, QuotationItem, WorkshopCutItem } from '../types';
 import { formatINR } from './calculations';
 
 /**
@@ -182,7 +182,10 @@ export function printViaHiddenIframe(htmlContent: string, filename?: string): bo
  */
 export function generateInvoicePrintHtml(invoice: Invoice, profile: BusinessProfile): string {
   const isIntraState = !invoice.customer.gstin || invoice.customer.gstin.startsWith('27');
-  const subtotal = invoice.items.reduce((acc, i) => acc + i.itemTotal, 0);
+  const itemsSubtotal = invoice.items.reduce((acc, i) => acc + i.itemTotal, 0);
+  const extraCharges = invoice.extraCharges || [];
+  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const subtotal = itemsSubtotal + extraChargesTotal;
   const gst = Math.round(subtotal * 0.18 * 100) / 100;
   const grandTotal = subtotal + gst;
 
@@ -317,9 +320,34 @@ export function generateInvoicePrintHtml(invoice: Invoice, profile: BusinessProf
         <div class="box" style="flex: 1;">
           <table style="font-size: 11px;">
             <tr>
+              <td style="padding: 4px 0;">Material &amp; Fabrication:</td>
+              <td class="text-right font-mono" style="font-weight: 600;">₹${itemsSubtotal.toLocaleString('en-IN')}</td>
+            </tr>
+            ${extraCharges
+              .map(
+                (c) => `
+              <tr>
+                <td style="padding: 4px 0; color: #334155;">${c.label || 'Additional Charge'}:</td>
+                <td class="text-right font-mono" style="font-weight: 600;">₹${(Number(c.amount) || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            `
+              )
+              .join('')}
+            ${
+              extraCharges.length > 0
+                ? `
+            <tr>
+              <td style="padding: 4px 0; border-top: 1px solid #e2e8f0; font-weight: 600;">Taxable Value (Subtotal):</td>
+              <td class="text-right font-mono" style="font-weight: 600; border-top: 1px solid #e2e8f0;">₹${subtotal.toLocaleString('en-IN')}</td>
+            </tr>
+            `
+                : `
+            <tr>
               <td style="padding: 4px 0;">Taxable Value (Subtotal):</td>
               <td class="text-right font-mono" style="font-weight: 600;">₹${subtotal.toLocaleString('en-IN')}</td>
             </tr>
+            `
+            }
             ${
               isIntraState
                 ? `
@@ -403,13 +431,28 @@ export function generateQuotationPrintHtml(
   validUntil: string,
   customer: Customer,
   items: QuotationItem[],
-  profile: BusinessProfile
+  profile: BusinessProfile,
+  extraCharges: ExtraCharge[] = []
 ): string {
-  const subtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
-  const gst = Math.round(subtotal * 0.18 * 100) / 100;
-  const grandTotal = subtotal + gst;
+  const itemsSubtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
+  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const taxableSubtotal = itemsSubtotal + extraChargesTotal;
+  const gst = Math.round(taxableSubtotal * 0.18 * 100) / 100;
+  const grandTotal = taxableSubtotal + gst;
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
   const totalArea = items.reduce((acc, i) => acc + i.totalAreaSqFt, 0);
+
+  const anyFitting = items.some((i) => i.accessories.siteFitting);
+  const fittingRateTotal = items.reduce(
+    (sum, i) =>
+      sum + (i.accessories.siteFitting ? i.totalAreaSqFt * (i.fittingCostPerSqFt ?? 40) : 0),
+    0
+  );
+  const fittingScopeText = anyFitting
+    ? fittingRateTotal === 0
+      ? 'Site Installation & Weather Sealing (Included Free)'
+      : 'On-Site Fitting & Silicone Sealing Included'
+    : 'Supply Only (No on-site fitting)';
 
   const itemRows = items
     .map(
@@ -485,7 +528,7 @@ export function generateQuotationPrintHtml(
           <div style="font-size: 12px;">${customer.address}</div>
           <div style="font-weight: 600; font-size: 11px; margin-top: 4px;">City: ${customer.city}</div>
           <div style="font-size: 11px; color: #047857; font-weight: bold; margin-top: 2px;">
-            Scope: Fabrication, 5mm Toughened Glass, Hardware & Installation
+            Scope: ${fittingScopeText}
           </div>
         </div>
       </div>
@@ -526,8 +569,22 @@ export function generateQuotationPrintHtml(
         <div class="box" style="flex: 1;">
           <table style="font-size: 11px;">
             <tr>
-              <td style="padding: 4px 0;">Material & Fabrication Subtotal:</td>
-              <td class="text-right font-mono" style="font-weight: 600;">₹${subtotal.toLocaleString('en-IN')}</td>
+              <td style="padding: 4px 0;">Material &amp; Fabrication:</td>
+              <td class="text-right font-mono" style="font-weight: 600;">₹${itemsSubtotal.toLocaleString('en-IN')}</td>
+            </tr>
+            ${extraCharges
+              .map(
+                (c) => `
+              <tr>
+                <td style="padding: 4px 0; color: #334155;">${c.label || 'Additional Charge'}:</td>
+                <td class="text-right font-mono" style="font-weight: 600;">₹${(Number(c.amount) || 0).toLocaleString('en-IN')}</td>
+              </tr>
+            `
+              )
+              .join('')}
+            <tr>
+              <td style="padding: 4px 0; border-top: 1px solid #e2e8f0; font-weight: 600;">Taxable Subtotal:</td>
+              <td class="text-right font-mono" style="font-weight: 600; border-top: 1px solid #e2e8f0;">₹${taxableSubtotal.toLocaleString('en-IN')}</td>
             </tr>
             <tr>
               <td style="padding: 4px 0;">GST (18% Integrated / CGST+SGST):</td>

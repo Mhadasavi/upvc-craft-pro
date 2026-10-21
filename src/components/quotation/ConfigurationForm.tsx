@@ -30,6 +30,7 @@ interface ConfigurationFormProps {
   profileBrand: string;
   colorFoil: ProfileFoilColor;
   accessories: ItemAccessories;
+  fittingRatePerSqFt?: number;
   trackCount: number;
   panelCount: number;
   openingDirection: OpeningDirection;
@@ -43,6 +44,7 @@ interface ConfigurationFormProps {
   onUpdateProfileBrand: (brand: string) => void;
   onUpdateColorFoil: (color: ProfileFoilColor) => void;
   onToggleAccessory: (key: keyof ItemAccessories) => void;
+  onUpdateFittingRate?: (rate: number) => void;
   onUpdateTrackCount: (count: number) => void;
   onUpdatePanelCount: (count: number) => void;
   onUpdateOpeningDirection: (dir: OpeningDirection) => void;
@@ -60,6 +62,7 @@ export const ConfigurationForm: React.FC<ConfigurationFormProps> = ({
   profileBrand,
   colorFoil,
   accessories,
+  fittingRatePerSqFt = 40,
   trackCount,
   panelCount,
   openingDirection,
@@ -73,6 +76,7 @@ export const ConfigurationForm: React.FC<ConfigurationFormProps> = ({
   onUpdateProfileBrand,
   onUpdateColorFoil,
   onToggleAccessory,
+  onUpdateFittingRate,
   onUpdateTrackCount,
   onUpdatePanelCount,
   onUpdateOpeningDirection,
@@ -519,19 +523,88 @@ export const ConfigurationForm: React.FC<ConfigurationFormProps> = ({
                 </div>
               </label>
 
-              {/* Site Fitting & Silicone */}
-              <label className="flex items-center gap-2 p-2 rounded-lg bg-white hover:bg-slate-50 cursor-pointer transition-all border border-slate-200">
-                <input
-                  type="checkbox"
-                  checked={accessories.siteFitting}
-                  onChange={() => onToggleAccessory('siteFitting')}
-                  className="w-4 h-4 rounded text-blue-600 accent-blue-600"
-                />
-                <div className="flex flex-col">
-                  <span className="font-bold text-slate-800">Site Fitting &amp; Silicone</span>
-                  <span className="text-[11px] text-slate-500">+₹40/sq.ft weather sealing</span>
+              {/* Site Fitting & Silicone Weather Seal */}
+              <div
+                className={`p-2.5 rounded-lg border transition-all col-span-1 sm:col-span-2 ${
+                  accessories.siteFitting ? 'bg-blue-50/40 border-blue-200' : 'bg-white border-slate-200'
+                }`}
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <label className="flex items-center gap-2 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={accessories.siteFitting}
+                      onChange={() => onToggleAccessory('siteFitting')}
+                      className="w-4 h-4 rounded text-blue-600 accent-blue-600"
+                    />
+                    <div className="flex flex-col">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-800 text-xs">Site Fitting &amp; Silicone</span>
+                        {accessories.siteFitting && fittingRatePerSqFt === 0 && (
+                          <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
+                            Free / Waived
+                          </span>
+                        )}
+                      </div>
+                      <span className="text-[11px] text-slate-500">
+                        {accessories.siteFitting
+                          ? fittingRatePerSqFt === 0
+                            ? 'Included in scope (₹0 installation fee)'
+                            : `+₹${fittingRatePerSqFt}/sq.ft weather sealing & installation`
+                          : 'Supply Only (No installation)'}
+                      </span>
+                    </div>
+                  </label>
+
+                  {/* Free / Standard / Custom Rate Controls */}
+                  {accessories.siteFitting && onUpdateFittingRate && (
+                    <div className="flex items-center gap-1.5 pl-6 sm:pl-0">
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onUpdateFittingRate(0);
+                        }}
+                        className={`px-2 py-1 rounded-md text-[10.5px] font-bold transition-all ${
+                          fittingRatePerSqFt === 0
+                            ? 'bg-emerald-600 text-white shadow-2xs'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                        title="Waive installation fee (Include free in order scope)"
+                      >
+                        Free (₹0)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.preventDefault();
+                          onUpdateFittingRate(40);
+                        }}
+                        className={`px-2 py-1 rounded-md text-[10.5px] font-bold transition-all ${
+                          fittingRatePerSqFt === 40
+                            ? 'bg-blue-600 text-white shadow-2xs'
+                            : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'
+                        }`}
+                        title="Standard rate (₹40/sq.ft)"
+                      >
+                        ₹40/sq.ft
+                      </button>
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-md px-1.5 h-6 text-xs">
+                        <span className="text-[10px] font-mono text-slate-400">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={fittingRatePerSqFt}
+                          onChange={(e) => onUpdateFittingRate(Math.max(0, Number(e.target.value)))}
+                          className="w-10 text-center font-mono text-[11px] font-bold text-slate-800 bg-transparent focus:outline-none"
+                          title="Custom Rate per Sq.Ft"
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </label>
+              </div>
             </div>
           </div>
 

@@ -105,6 +105,12 @@ export interface Customer {
 
 export type QuotationStatus = 'draft' | 'sent' | 'confirmed' | 'invoiced';
 
+export interface ExtraCharge {
+  id: string;
+  label: string;
+  amount: number;
+}
+
 export interface Quotation {
   id: string;
   quoteNumber: string;
@@ -117,6 +123,7 @@ export interface Quotation {
   deliveryTimeline: string;
   paymentTerms: string;
   createdAt: string;
+  extraCharges?: ExtraCharge[];
 }
 
 export interface PaymentRecord {
@@ -143,6 +150,7 @@ export interface Invoice {
   status: 'pending' | 'partially_paid' | 'paid' | 'cancelled';
   payments: PaymentRecord[];
   notes?: string;
+  extraCharges?: ExtraCharge[];
 }
 
 export interface BusinessProfile {

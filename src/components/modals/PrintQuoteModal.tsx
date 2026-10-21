@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { BusinessProfile, Customer, QuotationItem } from '../../types';
+import { BusinessProfile, Customer, ExtraCharge, QuotationItem } from '../../types';
 import { formatDimension, formatINR } from '../../utils/calculations';
 import { MiniDiagramThumbnail } from '../diagram/MiniDiagramThumbnail';
 import {
@@ -7,7 +7,7 @@ import {
   downloadPrintableHtml,
   generateQuotationPrintHtml,
 } from '../../utils/printDocument';
-import { X, Printer, Download, CheckCircle2, Loader2 } from 'lucide-react';
+import { X, Printer, Download, CheckCircle2, Loader2, Truck } from 'lucide-react';
 
 interface PrintQuoteModalProps {
   isOpen: boolean;
@@ -18,6 +18,7 @@ interface PrintQuoteModalProps {
   customer: Customer;
   items: QuotationItem[];
   profile: BusinessProfile;
+  extraCharges?: ExtraCharge[];
 }
 
 export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
@@ -29,6 +30,7 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
   customer,
   items,
   profile,
+  extraCharges = [],
 }) => {
   const [downloadSuccess, setDownloadSuccess] = useState(false);
   const [printStatus, setPrintStatus] = useState<string | null>(null);
@@ -37,9 +39,11 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
 
   const totalArea = items.reduce((acc, i) => acc + i.totalAreaSqFt, 0);
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
-  const subtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
-  const gst = Math.round(subtotal * 0.18 * 100) / 100;
-  const grandTotal = subtotal + gst;
+  const itemsSubtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
+  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const taxableSubtotal = itemsSubtotal + extraChargesTotal;
+  const gst = Math.round(taxableSubtotal * 0.18 * 100) / 100;
+  const grandTotal = taxableSubtotal + gst;
 
   const handlePrint = () => {
     const html = generateQuotationPrintHtml(
@@ -48,7 +52,8 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
       validUntil,
       customer,
       items,
-      profile
+      profile,
+      extraCharges
     );
     setPrintStatus('Opening Print...');
     const res = printDocument(html, `${quoteNumber}.html`);
@@ -69,9 +74,10 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
       validUntil,
       customer,
       items,
-      profile
+      profile,
+      extraCharges
     );
-    downloadPrintableHtml(`${quoteNumber}.html`, html);
+    downloadPrintableHtml(html, `${quoteNumber}.html`);
     setDownloadSuccess(true);
     setTimeout(() => setDownloadSuccess(false), 2500);
   };
@@ -251,12 +257,21 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col justify-between">
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Material &amp; Fabrication Subtotal:</span>
-                  <span className="font-mono font-bold text-slate-900">{formatINR(subtotal)}</span>
+                  <span className="text-slate-600">Material &amp; Fabrication:</span>
+                  <span className="font-mono font-bold text-slate-900">{formatINR(itemsSubtotal)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-600">Site Fitting &amp; Weather Sealing:</span>
-                  <span className="font-mono font-semibold text-emerald-800">Included</span>
+                {extraCharges.map((c) => (
+                  <div key={c.id} className="flex justify-between text-amber-900">
+                    <span className="flex items-center gap-1">
+                      <Truck className="w-3 h-3 text-amber-600" />
+                      {c.label || 'Additional Charge'}:
+                    </span>
+                    <span className="font-mono font-bold">{formatINR(c.amount)}</span>
+                  </div>
+                ))}
+                <div className="flex justify-between pt-1 border-t border-slate-200">
+                  <span className="text-slate-700 font-semibold">Taxable Subtotal:</span>
+                  <span className="font-mono font-bold text-slate-900">{formatINR(taxableSubtotal)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-slate-600">GST (18% - CGST 9% + SGST 9%):</span>

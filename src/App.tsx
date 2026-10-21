@@ -3,6 +3,7 @@ import {
   AppSettings,
   BusinessProfile,
   Customer,
+  ExtraCharge,
   Invoice,
   PaymentRecord,
   Quotation,
@@ -94,6 +95,7 @@ export default function App() {
     return list[0] || INITIAL_CUSTOMERS[0];
   });
   const [quotationItems, setQuotationItems] = useState<QuotationItem[]>([]);
+  const [activeExtraCharges, setActiveExtraCharges] = useState<ExtraCharge[]>([]);
   const [quotations, setQuotations] = useState<Quotation[]>(() =>
     loadFromStorage(STORAGE_KEYS.QUOTATIONS, INITIAL_QUOTATIONS_LIST)
   );
@@ -208,24 +210,32 @@ export default function App() {
   };
 
   // Finalize Quotation to Invoice
-  const handleFinalizeInvoice = () => {
-    const subtotal = quotationItems.reduce((acc, i) => acc + i.itemTotal, 0);
-    const grandTotal = Math.round(subtotal * 1.18 * 100) / 100;
+  const handleFinalizeInvoice = (targetQuote?: Quotation) => {
+    const itemsToUse = targetQuote ? targetQuote.items : quotationItems;
+    const quoteNumToUse = targetQuote ? targetQuote.quoteNumber : activeQuoteNumber;
+    const customerToUse = targetQuote ? targetQuote.customer : currentCustomer;
+    const extraChargesToUse = targetQuote ? (targetQuote.extraCharges || []) : activeExtraCharges;
+
+    const itemsSubtotal = itemsToUse.reduce((acc, i) => acc + i.itemTotal, 0);
+    const extraTotal = extraChargesToUse.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+    const taxableSubtotal = itemsSubtotal + extraTotal;
+    const grandTotal = Math.round(taxableSubtotal * 1.18 * 100) / 100;
     const invNumber = getNextInvoiceNumber(invoices);
 
     const newInvoice: Invoice = {
       id: `inv-${Date.now()}`,
       invoiceNumber: invNumber,
-      quotationId: activeQuoteNumber,
-      quoteNumber: activeQuoteNumber,
+      quotationId: quoteNumToUse,
+      quoteNumber: quoteNumToUse,
       date: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
       dueDate: new Date(Date.now() + 14 * 86400000).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: 'short',
         year: 'numeric',
       }),
-      customer: currentCustomer,
-      items: [...quotationItems],
+      customer: customerToUse,
+      items: [...itemsToUse],
+      extraCharges: extraChargesToUse.length > 0 ? [...extraChargesToUse] : undefined,
       totalAmount: grandTotal,
       advanceReceived: 0,
       balanceDue: grandTotal,
@@ -237,7 +247,7 @@ export default function App() {
 
     // Update status of current quote in quotes list
     setQuotations((prev) =>
-      prev.map((q) => (q.quoteNumber === activeQuoteNumber ? { ...q, status: 'invoiced' } : q))
+      prev.map((q) => (q.quoteNumber === quoteNumToUse ? { ...q, status: 'invoiced' } : q))
     );
 
     setActiveTab('invoices');
@@ -333,6 +343,7 @@ export default function App() {
     setActiveQuoteValidUntil(quote.validUntil || calculateValidUntilDate(quote.date || '', 30));
     setCurrentCustomer(quote.customer);
     setQuotationItems([...quote.items]);
+    setActiveExtraCharges(quote.extraCharges ? [...quote.extraCharges] : []);
     setBuilderStep(2); // Since customer is already attached to this quotation, open studio directly
     setActiveTab('new-quotation');
     showToast(`Loaded ${quote.quoteNumber} in Live CAD Estimator`);
@@ -346,6 +357,7 @@ export default function App() {
     setActiveQuoteDate(todayStr);
     setActiveQuoteValidUntil(calculateValidUntilDate(todayStr, appSettings.quotation.defaultValidityDays || 30));
     setQuotationItems([]); // Empty items list by default
+    setActiveExtraCharges([]);
     setBuilderStep(1); // Explicitly open Step 1: Ask for customer details!
     setActiveTab('new-quotation');
     showToast(`Started New Quotation #${nextNumber} (Step 1: Customer Details)`);
@@ -385,13 +397,15 @@ export default function App() {
   const handleSaveQuotation = (
     status: QuotationStatus = 'draft',
     customDate?: string,
-    customValidUntil?: string
+    customValidUntil?: string,
+    extraCharges?: ExtraCharge[]
   ) => {
     const quoteDateToSave = customDate || activeQuoteDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
     const validUntilToSave =
       customValidUntil ||
       activeQuoteValidUntil ||
       calculateValidUntilDate(quoteDateToSave, appSettings.quotation.defaultValidityDays || 30);
+    const chargesToSave = extraCharges !== undefined ? extraCharges : activeExtraCharges;
 
     const existingIndex = quotations.findIndex((q) => q.quoteNumber === activeQuoteNumber);
     let updatedQuotes: Quotation[];
@@ -403,6 +417,7 @@ export default function App() {
         validUntil: validUntilToSave,
         customer: currentCustomer,
         items: [...quotationItems],
+        extraCharges: chargesToSave,
         status: status || quotations[existingIndex].status,
       };
       updatedQuotes = quotations.map((q, idx) => (idx === existingIndex ? updated : q));
@@ -417,6 +432,7 @@ export default function App() {
         validUntil: validUntilToSave,
         customer: currentCustomer,
         items: [...quotationItems],
+        extraCharges: chargesToSave,
         status: status,
         notes: appSettings.quotation.defaultNotes || 'Standard fabrication quote with 18% GST.',
         deliveryTimeline: appSettings.quotation.defaultDeliveryTimeline || '10 to 14 Working Days',
@@ -432,6 +448,7 @@ export default function App() {
     const nextSeqNumber = getNextQuotationNumber(updatedQuotes, appSettings.quotation);
     setActiveQuoteNumber(nextSeqNumber);
     setQuotationItems([]); // Reset to empty items list for subsequent quote
+    setActiveExtraCharges([]);
 
     // Automatically navigate to Quotations Directory so user sees their saved quote
     setActiveTab('quotations');
@@ -452,6 +469,7 @@ export default function App() {
       status: 'draft',
       date: todayStr,
       validUntil: calculateValidUntilDate(todayStr, appSettings.quotation.defaultValidityDays || 30),
+      extraCharges: quote.extraCharges ? [...quote.extraCharges] : [],
       createdAt: new Date().toISOString(),
     };
     setQuotations([duplicated, ...quotations]);
@@ -549,9 +567,11 @@ export default function App() {
               profile={businessProfile}
               rateSheet={rateSheet}
               initialStep={builderStep}
+              initialExtraCharges={activeExtraCharges}
               onUpdateCustomer={setCurrentCustomer}
               onAddNewCustomer={handleAddNewCustomer}
               onUpdateItems={setQuotationItems}
+              onUpdateExtraCharges={setActiveExtraCharges}
               onUpdateQuoteDate={setActiveQuoteDate}
               onUpdateValidUntil={setActiveQuoteValidUntil}
               onSaveQuotation={handleSaveQuotation}
@@ -585,10 +605,7 @@ export default function App() {
               onAddPayment={handleAddPayment}
               onUpdateQuoteStatus={handleUpdateQuoteStatus}
               onConvertToInvoice={(q) => {
-                setActiveQuoteNumber(q.quoteNumber);
-                setCurrentCustomer(q.customer);
-                setQuotationItems([...q.items]);
-                handleFinalizeInvoice();
+                handleFinalizeInvoice(q);
               }}
             />
           )}
@@ -605,10 +622,7 @@ export default function App() {
               onUpdateQuoteStatus={handleUpdateQuoteStatus}
               onDuplicateQuote={handleDuplicateQuote}
               onConvertToInvoice={(q) => {
-                setActiveQuoteNumber(q.quoteNumber);
-                setCurrentCustomer(q.customer);
-                setQuotationItems([...q.items]);
-                handleFinalizeInvoice();
+                handleFinalizeInvoice(q);
               }}
             />
           )}
@@ -683,6 +697,7 @@ export default function App() {
           validUntil={quoteToPrint.validUntil}
           customer={quoteToPrint.customer}
           items={quoteToPrint.items}
+          extraCharges={quoteToPrint.extraCharges}
           profile={businessProfile}
         />
       )}

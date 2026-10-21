@@ -81,7 +81,10 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
 
   // Real-time calculations for edited state
   const currentItems = isEditing ? editItems : invoice.items;
-  const currentSubtotal = currentItems.reduce((acc, i) => acc + i.itemTotal, 0);
+  const currentItemsSubtotal = currentItems.reduce((acc, i) => acc + i.itemTotal, 0);
+  const currentExtraCharges = invoice.extraCharges || [];
+  const currentExtraChargesTotal = currentExtraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const currentSubtotal = currentItemsSubtotal + currentExtraChargesTotal;
   const currentGst = Math.round(currentSubtotal * 0.18 * 100) / 100;
   const currentGrandTotal = currentSubtotal + currentGst;
   const currentReceived = invoice.advanceReceived;
@@ -179,6 +182,7 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
         gstin: custGstin.trim().toUpperCase() || undefined,
       },
       items: editItems,
+      extraCharges: invoice.extraCharges,
       totalAmount: currentGrandTotal,
       advanceReceived: currentReceived,
       balanceDue: currentBalanceDue,
@@ -723,6 +727,22 @@ export const InvoiceDetailModal: React.FC<InvoiceDetailModalProps> = ({
               <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex flex-col justify-between gap-2">
                 <div className="space-y-2 text-xs">
                   <div className="flex justify-between items-center text-slate-600">
+                    <span>Material &amp; Fabrication:</span>
+                    <span className="font-mono font-semibold text-slate-900">{formatINR(currentItemsSubtotal)}</span>
+                  </div>
+
+                  {currentExtraCharges.length > 0 && (
+                    <div className="space-y-1 py-1 border-t border-dashed border-slate-200">
+                      {currentExtraCharges.map((c) => (
+                        <div key={c.id} className="flex justify-between items-center text-slate-600">
+                          <span className="text-[11px] text-amber-800">+ {c.label}:</span>
+                          <span className="font-mono font-bold text-amber-900">₹{(Number(c.amount) || 0).toLocaleString('en-IN')}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  <div className="flex justify-between items-center text-slate-600 pt-0.5 border-t border-slate-200 font-medium">
                     <span>Taxable Value (Subtotal):</span>
                     <span className="font-mono font-semibold text-slate-900">{formatINR(currentSubtotal)}</span>
                   </div>
