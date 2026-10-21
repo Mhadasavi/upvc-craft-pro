@@ -241,7 +241,7 @@ export const DashboardView: React.FC<DashboardViewProps> = ({
           type="button"
         >
           <PlusCircle className="w-4 h-4 stroke-[2.5]" />
-          <span>+ New Quotation</span>
+          <span>New Quotation</span>
         </button>
       </div>
 
