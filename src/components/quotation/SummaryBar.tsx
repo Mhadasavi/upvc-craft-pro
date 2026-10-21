@@ -11,6 +11,8 @@ import {
   Truck,
   Sparkles,
   Tag,
+  Package,
+  ArrowUpCircle,
 } from 'lucide-react';
 
 interface SummaryBarProps {
@@ -150,54 +152,80 @@ export const SummaryBar: React.FC<SummaryBarProps> = ({
             <span className="font-semibold text-slate-900">{formatINR(materialBaseTotal)}</span>
           </div>
 
-          {/* Site Fitting & Weather Seal with Waive/Restore Toggle */}
+          {/* Site Fitting & Weather Seal with Waive/Restore Toggle (Placed with label) */}
           <div className="flex justify-between items-center text-slate-700">
-            <div className="flex items-center gap-1.5 font-sans">
+            <div className="flex items-center gap-2 font-sans flex-wrap">
               <span className="font-medium text-slate-600">Site Fitting &amp; Weather Seal:</span>
-              {anyItemHasFitting && siteFittingTotal === 0 && (
-                <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                  Free / Waived
-                </span>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-900">
-                {formatINR(siteFittingTotal)}
-              </span>
               {onToggleWaiveFitting && anyItemHasFitting && (
                 siteFittingTotal > 0 ? (
                   <button
                     type="button"
                     onClick={() => onToggleWaiveFitting(true)}
-                    className="font-sans text-[10px] text-blue-600 hover:text-blue-800 font-bold hover:underline"
+                    className="px-2 py-0.5 rounded-md bg-blue-50 hover:bg-blue-100 text-blue-700 text-[10px] font-bold border border-blue-200 transition-colors cursor-pointer"
                     title="Waive installation fee for this entire quote"
                   >
-                    Waive Fee
+                    Waive Off
                   </button>
                 ) : (
-                  <button
-                    type="button"
-                    onClick={() => onToggleWaiveFitting(false)}
-                    className="font-sans text-[10px] text-slate-500 hover:text-slate-800 font-semibold hover:underline"
-                    title="Charge standard ₹40/sq.ft fitting fee"
-                  >
-                    Restore ₹40
-                  </button>
+                  <div className="flex items-center gap-1.5">
+                    <span className="px-1.5 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-200">
+                      Waived Off (₹0)
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => onToggleWaiveFitting(false)}
+                      className="px-1.5 py-0.5 rounded bg-slate-100 hover:bg-slate-200 text-slate-600 text-[10px] font-semibold transition-colors cursor-pointer"
+                      title="Charge standard ₹40/sq.ft fitting fee"
+                    >
+                      Restore ₹40
+                    </button>
+                  </div>
                 )
               )}
             </div>
+            <span className="font-semibold text-slate-900">
+              {formatINR(siteFittingTotal)}
+            </span>
           </div>
 
-          {/* Itemized Extra Charges (Transportation, Crane, etc.) */}
-          {extraCharges.map((charge) => (
-            <div key={charge.id} className="flex justify-between items-center text-slate-700 bg-amber-50/60 -mx-1 px-1 py-0.5 rounded">
-              <span className="font-sans text-slate-700 flex items-center gap-1">
-                <Truck className="w-3 h-3 text-amber-600 shrink-0" />
-                <span className="truncate max-w-[200px]">{charge.label || 'Additional Charge'}:</span>
-              </span>
-              <span className="font-semibold text-slate-900">{formatINR(charge.amount || 0)}</span>
-            </div>
-          ))}
+          {/* Itemized Extra Charges (Transportation, Crane, Custom, etc.) */}
+          {extraCharges.map((charge) => {
+            const labelLower = (charge.label || '').toLowerCase();
+            const isTransport =
+              labelLower.includes('transport') ||
+              labelLower.includes('freight') ||
+              labelLower.includes('tempo') ||
+              labelLower.includes('delivery') ||
+              labelLower.includes('vehicle');
+            const isLoading =
+              labelLower.includes('loading') ||
+              labelLower.includes('unloading') ||
+              labelLower.includes('handling') ||
+              labelLower.includes('labor') ||
+              labelLower.includes('labour');
+            const isCrane =
+              labelLower.includes('crane') ||
+              labelLower.includes('hoist') ||
+              labelLower.includes('lifting');
+
+            return (
+              <div key={charge.id} className="flex justify-between items-center text-slate-700 bg-amber-50/60 -mx-1 px-1 py-0.5 rounded">
+                <span className="font-sans text-slate-700 flex items-center gap-1">
+                  {isTransport ? (
+                    <Truck className="w-3 h-3 text-amber-600 shrink-0" />
+                  ) : isLoading ? (
+                    <Package className="w-3 h-3 text-blue-600 shrink-0" />
+                  ) : isCrane ? (
+                    <ArrowUpCircle className="w-3 h-3 text-purple-600 shrink-0" />
+                  ) : (
+                    <Tag className="w-3 h-3 text-slate-500 shrink-0" />
+                  )}
+                  <span className="truncate max-w-[200px]">{charge.label || 'Additional Charge'}:</span>
+                </span>
+                <span className="font-semibold text-slate-900">{formatINR(charge.amount || 0)}</span>
+              </div>
+            );
+          })}
 
           {/* Subtotal */}
           <div className="flex justify-between items-center text-slate-800 pt-1.5 border-t border-slate-200">

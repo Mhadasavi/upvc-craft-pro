@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { BusinessProfile, Customer, ExtraCharge, QuotationItem } from '../../types';
 import { formatDimension, formatINR } from '../../utils/calculations';
-import { MiniDiagramThumbnail } from '../diagram/MiniDiagramThumbnail';
+import { ElevationDiagram } from '../../utils/elevationSvg';
 import {
   printDocument,
   downloadPrintableHtml,
   generateQuotationPrintHtml,
 } from '../../utils/printDocument';
-import { X, Printer, Download, CheckCircle2, Loader2, Truck } from 'lucide-react';
+import { X, Printer, Download, CheckCircle2, Loader2, Truck, Package, ArrowUpCircle, Tag } from 'lucide-react';
 
 interface PrintQuoteModalProps {
   isOpen: boolean;
@@ -40,8 +40,18 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
   const totalArea = items.reduce((acc, i) => acc + i.totalAreaSqFt, 0);
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
   const itemsSubtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
+  const anyFitting = items.some((i) => i.accessories.siteFitting);
+  const siteFittingTotal = items.reduce(
+    (sum, i) =>
+      sum + (i.accessories.siteFitting ? i.totalAreaSqFt * (i.fittingCostPerSqFt ?? 40) : 0),
+    0
+  );
+  const materialBaseTotal = items.reduce((sum, i) => {
+    const fittingCost = i.accessories.siteFitting ? i.totalAreaSqFt * (i.fittingCostPerSqFt ?? 40) : 0;
+    return sum + (i.itemTotal - fittingCost);
+  }, 0);
   const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
-  const taxableSubtotal = itemsSubtotal + extraChargesTotal;
+  const taxableSubtotal = materialBaseTotal + siteFittingTotal + extraChargesTotal;
   const gst = Math.round(taxableSubtotal * 0.18 * 100) / 100;
   const grandTotal = taxableSubtotal + gst;
 
@@ -77,7 +87,7 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
       profile,
       extraCharges
     );
-    downloadPrintableHtml(html, `${quoteNumber}.html`);
+    downloadPrintableHtml(`${quoteNumber}.html`, html);
     setDownloadSuccess(true);
     setTimeout(() => setDownloadSuccess(false), 2500);
   };
@@ -193,8 +203,8 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-slate-100 text-slate-700 font-bold uppercase text-[10px] border-y border-slate-300">
-                  <th className="py-2.5 px-3 w-12 text-center">#</th>
-                  <th className="py-2.5 px-3 w-14 text-center">Elevation</th>
+                  <th className="py-2.5 px-3 w-10 text-center">#</th>
+                  <th className="py-2.5 px-3 w-44 text-center">Elevation (CAD)</th>
                   <th className="py-2.5 px-3">Description &amp; Specifications</th>
                   <th className="py-2.5 px-3 text-right">Dimensions</th>
                   <th className="py-2.5 px-3 text-center">Qty</th>
@@ -209,9 +219,12 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
                     <td className="py-3 px-3 text-center font-mono font-bold text-slate-400">
                       {String(index + 1).padStart(2, '0')}
                     </td>
-                    <td className="py-2 px-3 text-center">
-                      <div className="w-12 h-10 border border-slate-200 rounded p-0.5 bg-slate-50 inline-block">
-                        <MiniDiagramThumbnail typologyId={item.typologyId} colorFoil={item.colorFoil} />
+                    <td className="py-3 px-2 text-center w-44 align-middle">
+                      <div className="flex flex-col items-center justify-center">
+                        <ElevationDiagram item={item} className="w-[155px] h-[112px] mx-auto" />
+                        <div className="font-mono text-[11px] font-extrabold text-blue-900 bg-blue-50 border border-blue-200 rounded px-2 py-0.5 mt-1.5 shadow-2xs">
+                          {item.widthInInches}" W × {item.heightInInches}" H
+                        </div>
                       </div>
                     </td>
                     <td className="py-3 px-3">
@@ -220,6 +233,11 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
                       <p className="text-[11px] text-slate-500">
                         {item.profileBrand} • {item.glassPackage}
                         {item.accessories.mosquitoMesh ? ' • SS304 Mesh' : ''}
+                        {item.accessories.siteFitting
+                          ? (item.fittingCostPerSqFt ?? 40) === 0
+                            ? ' • Fitting: Free / Waived'
+                            : ` • Fitting: ₹${item.fittingCostPerSqFt ?? 40}/sq.ft`
+                          : ' • Supply Only (No Fitting)'}
                       </p>
                     </td>
                     <td className="py-3 px-3 text-right font-mono font-medium whitespace-nowrap">
@@ -257,18 +275,56 @@ export const PrintQuoteModal: React.FC<PrintQuoteModalProps> = ({
             <div className="bg-slate-50 rounded-xl p-4 border border-slate-200 flex flex-col justify-between">
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-600">Material &amp; Fabrication:</span>
-                  <span className="font-mono font-bold text-slate-900">{formatINR(itemsSubtotal)}</span>
+                  <span className="text-slate-600">Material &amp; Fabrication Base:</span>
+                  <span className="font-mono font-bold text-slate-900">{formatINR(materialBaseTotal)}</span>
                 </div>
-                {extraCharges.map((c) => (
-                  <div key={c.id} className="flex justify-between text-amber-900">
-                    <span className="flex items-center gap-1">
-                      <Truck className="w-3 h-3 text-amber-600" />
-                      {c.label || 'Additional Charge'}:
-                    </span>
-                    <span className="font-mono font-bold">{formatINR(c.amount)}</span>
-                  </div>
-                ))}
+                <div className="flex justify-between">
+                  <span className="text-slate-600">Site Fitting &amp; Weather Seal:</span>
+                  <span className={`font-mono font-bold ${siteFittingTotal === 0 ? 'text-emerald-700' : 'text-slate-900'}`}>
+                    {anyFitting
+                      ? siteFittingTotal === 0
+                        ? '₹0 (Included Free in Scope)'
+                        : formatINR(siteFittingTotal)
+                      : '₹0 (Supply Only)'}
+                  </span>
+                </div>
+                {extraCharges.map((c) => {
+                  const labelLower = (c.label || '').toLowerCase();
+                  const isTransport =
+                    labelLower.includes('transport') ||
+                    labelLower.includes('freight') ||
+                    labelLower.includes('tempo') ||
+                    labelLower.includes('delivery') ||
+                    labelLower.includes('vehicle');
+                  const isLoading =
+                    labelLower.includes('loading') ||
+                    labelLower.includes('unloading') ||
+                    labelLower.includes('handling') ||
+                    labelLower.includes('labor') ||
+                    labelLower.includes('labour');
+                  const isCrane =
+                    labelLower.includes('crane') ||
+                    labelLower.includes('hoist') ||
+                    labelLower.includes('lifting');
+
+                  return (
+                    <div key={c.id} className="flex justify-between text-amber-900">
+                      <span className="flex items-center gap-1">
+                        {isTransport ? (
+                          <Truck className="w-3 h-3 text-amber-600" />
+                        ) : isLoading ? (
+                          <Package className="w-3 h-3 text-blue-600" />
+                        ) : isCrane ? (
+                          <ArrowUpCircle className="w-3 h-3 text-purple-600" />
+                        ) : (
+                          <Tag className="w-3 h-3 text-slate-500" />
+                        )}
+                        {c.label || 'Additional Charge'}:
+                      </span>
+                      <span className="font-mono font-bold">{formatINR(c.amount)}</span>
+                    </div>
+                  );
+                })}
                 <div className="flex justify-between pt-1 border-t border-slate-200">
                   <span className="text-slate-700 font-semibold">Taxable Subtotal:</span>
                   <span className="font-mono font-bold text-slate-900">{formatINR(taxableSubtotal)}</span>

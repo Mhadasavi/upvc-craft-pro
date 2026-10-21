@@ -57,6 +57,8 @@ import {
   Trash2,
   Tag,
   PlusCircle,
+  Package,
+  ArrowUpCircle,
 } from 'lucide-react';
 import { lookupGstDetails, parseGstinStructure } from '../../utils/gstLookup';
 import { formatINR } from '../../utils/calculations';
@@ -1309,84 +1311,118 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
                 )}
                 <button
                   type="button"
-                  onClick={() => handleAddExtraCharge('Transportation / Freight Charges', 1500)}
+                  onClick={() => handleAddExtraCharge('', 0)}
                   className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
                 >
                   <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ Add Charge</span>
+                  <span>Add Charge</span>
                 </button>
               </div>
             </div>
 
-            {/* If no extra charges added yet: show quick chips */}
-            {extraCharges.length === 0 ? (
-              <div className="flex flex-wrap items-center gap-2 py-1">
-                <span className="text-[11px] text-slate-400 font-medium mr-1">Quick add presets:</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Transportation & Freight', 1500)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 hover:text-amber-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Truck className="w-3 h-3 text-amber-600" />
-                  <span>+ Transportation (₹1,500)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Loading & Unloading Charges', 800)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 hover:text-blue-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>+ Loading &amp; Unloading (₹800)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Crane / High-Rise Hoisting Charges', 2500)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 hover:text-purple-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>+ Crane / Hoisting (₹2,500)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('', 0)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Tag className="w-3 h-3 text-slate-500" />
-                  <span>+ Custom Text &amp; Value...</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {extraCharges.map((charge, idx) => (
-                  <div key={charge.id} className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
-                    <span className="font-mono text-[11px] font-bold text-slate-400 w-5 text-center">#{idx + 1}</span>
-                    <input
-                      type="text"
-                      value={charge.label}
-                      onChange={(e) => handleUpdateExtraCharge(charge.id, 'label', e.target.value)}
-                      placeholder="e.g. Transportation / Tempo charges to site..."
-                      className="flex-1 h-8 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 h-8">
-                      <span className="font-mono text-xs text-slate-400">₹</span>
+            {/* Quick Presets (Always visible so users can add multiple charges quickly) */}
+            <div className="flex flex-wrap items-center gap-2 py-1">
+              <span className="text-[11px] text-slate-400 font-medium mr-1">Quick presets:</span>
+              <button
+                type="button"
+                onClick={() => handleAddExtraCharge('Transportation & Freight', 1500)}
+                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 hover:text-amber-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <Truck className="w-3 h-3 text-amber-600" />
+                <span>+ Transportation (₹1,500)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddExtraCharge('Loading & Unloading Charges', 800)}
+                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 hover:text-blue-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <Package className="w-3 h-3 text-blue-600" />
+                <span>+ Loading &amp; Unloading (₹800)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddExtraCharge('Crane / High-Rise Hoisting Charges', 2500)}
+                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 hover:text-purple-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <ArrowUpCircle className="w-3 h-3 text-purple-600" />
+                <span>+ Crane / Hoisting (₹2,500)</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => handleAddExtraCharge('', 0)}
+                className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
+              >
+                <Tag className="w-3 h-3 text-slate-500" />
+                <span>+ Custom Fee</span>
+              </button>
+            </div>
+
+            {/* Added Extra Charges List */}
+            {extraCharges.length > 0 ? (
+              <div className="flex flex-col gap-2 pt-2 border-t border-slate-100">
+                {extraCharges.map((charge, idx) => {
+                  const labelLower = (charge.label || '').toLowerCase();
+                  const isTransport =
+                    labelLower.includes('transport') ||
+                    labelLower.includes('freight') ||
+                    labelLower.includes('tempo') ||
+                    labelLower.includes('delivery') ||
+                    labelLower.includes('vehicle');
+                  const isLoading =
+                    labelLower.includes('loading') ||
+                    labelLower.includes('unloading') ||
+                    labelLower.includes('handling') ||
+                    labelLower.includes('labor') ||
+                    labelLower.includes('labour');
+                  const isCrane =
+                    labelLower.includes('crane') ||
+                    labelLower.includes('hoist') ||
+                    labelLower.includes('lifting');
+
+                  return (
+                    <div key={charge.id} className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
+                      <span className="font-mono text-[11px] font-bold text-slate-400 w-5 text-center">#{idx + 1}</span>
+                      <div className="p-1 rounded-md bg-white border border-slate-200 text-slate-500 shrink-0">
+                        {isTransport ? (
+                          <Truck className="w-3.5 h-3.5 text-amber-600" />
+                        ) : isLoading ? (
+                          <Package className="w-3.5 h-3.5 text-blue-600" />
+                        ) : isCrane ? (
+                          <ArrowUpCircle className="w-3.5 h-3.5 text-purple-600" />
+                        ) : (
+                          <Tag className="w-3.5 h-3.5 text-slate-500" />
+                        )}
+                      </div>
                       <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={charge.amount || ''}
-                        onChange={(e) => handleUpdateExtraCharge(charge.id, 'amount', e.target.value)}
-                        placeholder="0"
-                        className="w-24 font-mono text-xs font-bold text-slate-900 bg-transparent focus:outline-none text-right"
+                        type="text"
+                        value={charge.label}
+                        onChange={(e) => handleUpdateExtraCharge(charge.id, 'label', e.target.value)}
+                        placeholder="e.g. Scaffolding, Wall Chipping, Freight..."
+                        className="flex-1 h-8 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                       />
+                      <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 h-8">
+                        <span className="font-mono text-xs text-slate-400">₹</span>
+                        <input
+                          type="number"
+                          min="0"
+                          step="1"
+                          value={charge.amount || ''}
+                          onChange={(e) => handleUpdateExtraCharge(charge.id, 'amount', e.target.value)}
+                          placeholder="0"
+                          className="w-24 font-mono text-xs font-bold text-slate-900 bg-transparent focus:outline-none text-right"
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveExtraCharge(charge.id)}
+                        className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
+                        title="Remove charge"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExtraCharge(charge.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Remove charge"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                ))}
+                  );
+                })}
 
                 <div className="flex items-center justify-between pt-1">
                   <button
@@ -1394,14 +1430,14 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
                     onClick={() => handleAddExtraCharge('', 0)}
                     className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
                   >
-                    <span>+ Add Another Custom Charge</span>
+                    <span>Add Another Custom Charge</span>
                   </button>
                   <span className="text-[11px] text-slate-400">
                     Standard 18% GST applies to additional charges.
                   </span>
                 </div>
               </div>
-            )}
+            ) : null}
           </div>
 
           {/* Fixed Quotation Summary & Action Card at the end of Quotation Table (like Invoice) */}
@@ -1506,189 +1542,69 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
               </div>
             </div>
 
-            {/* Right 4 Cols: Full Financial Ledger */}
+            {/* Right 4 Cols: Commercial Milestones & Warranty Verification */}
             <div className="lg:col-span-4 flex flex-col gap-4">
-              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-3.5">
-                <h3 className="font-bold text-slate-900 text-sm pb-2 border-b border-slate-100">
-                  Comprehensive Financial Summary
-                </h3>
-
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Total Units &amp; Area</span>
-                  <span className="font-mono font-bold text-slate-800">{totalUnits} Units • {totalArea.toFixed(1)} Sq.Ft</span>
+              <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-4">
+                <div className="flex items-center gap-2 pb-2.5 border-b border-slate-100">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <h3 className="font-bold text-slate-900 text-sm">
+                    Commercial Terms &amp; Scope
+                  </h3>
                 </div>
 
-                <div className="flex items-center justify-between text-xs">
-                  <span className="text-slate-500">Material Fabrication Base</span>
-                  <span className="font-mono font-semibold text-slate-800">{formatINR(materialBaseTotal)}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-slate-500">Site Fitting &amp; Weather Seal</span>
-                    {items.some((i) => i.accessories.siteFitting) && siteFittingTotal === 0 && (
-                      <span className="px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-800 text-[10px] font-bold">
-                        Free / Waived
-                      </span>
-                    )}
-                  </div>
-                  <span className="font-mono font-semibold text-slate-800">{formatINR(siteFittingTotal)}</span>
-                </div>
-
-                {extraCharges.map((c) => (
-                  <div key={c.id} className="flex items-center justify-between text-xs text-amber-900 bg-amber-50/70 px-2 py-1 rounded-lg">
-                    <span className="flex items-center gap-1 font-medium truncate max-w-[200px]">
-                      <Truck className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      {c.label || 'Additional Charge'}
+                <div className="space-y-3.5 text-xs">
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">
+                      Payment Milestones
                     </span>
-                    <span className="font-mono font-bold">{formatINR(c.amount)}</span>
-                  </div>
-                ))}
-
-                <div className="h-px bg-slate-100 my-1" />
-
-                <div className="flex items-center justify-between text-xs font-bold text-slate-800">
-                  <span>Taxable Subtotal</span>
-                  <span className="font-mono">{formatINR(subtotal)}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>CGST (9%)</span>
-                  <span className="font-mono">{formatINR(gstAmount / 2)}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-xs text-slate-600">
-                  <span>SGST (9%)</span>
-                  <span className="font-mono">{formatINR(gstAmount / 2)}</span>
-                </div>
-
-                <div className="p-3.5 bg-emerald-50 rounded-xl border border-emerald-300 flex items-center justify-between mt-1">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-emerald-800">Grand Total (Incl. 18% GST)</span>
-                    <span className="text-[10px] text-emerald-600 font-medium">Standard B2B / B2C Estimate</span>
-                  </div>
-                  <span className="font-mono text-xl font-extrabold text-emerald-700">{formatINR(grandTotal)}</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional / Custom Charges Panel (Transportation, Crane, Scaffolding, Custom line items) */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5 flex flex-col gap-3.5 mt-3">
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-100">
-              <div className="flex items-center gap-2">
-                <div className="p-1.5 rounded-lg bg-amber-50 text-amber-600 border border-amber-200">
-                  <Truck className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="text-xs font-bold text-slate-900">Additional Charges &amp; Transportation</h3>
-                  <p className="text-[11px] text-slate-500">
-                    Add freight, crane lifting, scaffolding, loading/unloading, or custom line items to this quotation.
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2">
-                {extraCharges.length > 0 && (
-                  <span className="font-mono text-xs font-bold text-amber-800 bg-amber-50 px-2 py-0.5 rounded border border-amber-200">
-                    Total Extra: {formatINR(extraChargesTotal)}
-                  </span>
-                )}
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Transportation / Freight Charges', 1500)}
-                  className="px-2.5 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white font-bold text-[11px] flex items-center gap-1 transition-colors cursor-pointer"
-                >
-                  <PlusCircle className="w-3.5 h-3.5" />
-                  <span>+ Add Charge</span>
-                </button>
-              </div>
-            </div>
-
-            {/* If no extra charges added yet: show quick chips */}
-            {extraCharges.length === 0 ? (
-              <div className="flex flex-wrap items-center gap-2 py-1">
-                <span className="text-[11px] text-slate-400 font-medium mr-1">Quick add presets:</span>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Transportation & Freight', 1500)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-amber-50 hover:border-amber-300 border border-slate-200 text-slate-700 hover:text-amber-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Truck className="w-3 h-3 text-amber-600" />
-                  <span>+ Transportation (₹1,500)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Loading & Unloading Charges', 800)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-blue-50 hover:border-blue-300 border border-slate-200 text-slate-700 hover:text-blue-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>+ Loading &amp; Unloading (₹800)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('Crane / High-Rise Hoisting Charges', 2500)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-purple-50 hover:border-purple-300 border border-slate-200 text-slate-700 hover:text-purple-900 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <span>+ Crane / Hoisting (₹2,500)</span>
-                </button>
-                <button
-                  type="button"
-                  onClick={() => handleAddExtraCharge('', 0)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-[11px] font-semibold transition-all flex items-center gap-1 cursor-pointer"
-                >
-                  <Tag className="w-3 h-3 text-slate-500" />
-                  <span>+ Custom Text &amp; Value...</span>
-                </button>
-              </div>
-            ) : (
-              <div className="flex flex-col gap-2">
-                {extraCharges.map((charge, idx) => (
-                  <div key={charge.id} className="flex items-center gap-2 bg-slate-50/80 p-2 rounded-xl border border-slate-200">
-                    <span className="font-mono text-[11px] font-bold text-slate-400 w-5 text-center">#{idx + 1}</span>
-                    <input
-                      type="text"
-                      value={charge.label}
-                      onChange={(e) => handleUpdateExtraCharge(charge.id, 'label', e.target.value)}
-                      placeholder="e.g. Transportation / Tempo charges to site..."
-                      className="flex-1 h-8 px-3 rounded-lg border border-slate-300 bg-white text-xs font-semibold text-slate-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                    />
-                    <div className="flex items-center gap-1 bg-white border border-slate-300 rounded-lg px-2 h-8">
-                      <span className="font-mono text-xs text-slate-400">₹</span>
-                      <input
-                        type="number"
-                        min="0"
-                        step="1"
-                        value={charge.amount || ''}
-                        onChange={(e) => handleUpdateExtraCharge(charge.id, 'amount', e.target.value)}
-                        placeholder="0"
-                        className="w-24 font-mono text-xs font-bold text-slate-900 bg-transparent focus:outline-none text-right"
-                      />
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-1.5 font-medium text-slate-700 text-[11px]">
+                      <div className="flex justify-between">
+                        <span>• Advance on Order Confirmation:</span>
+                        <strong className="text-slate-900 font-mono">50%</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>• Pre-Dispatch from Workshop:</span>
+                        <strong className="text-slate-900 font-mono">40%</strong>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>• Site Handover &amp; Sealing:</span>
+                        <strong className="text-slate-900 font-mono">10%</strong>
+                      </div>
                     </div>
-                    <button
-                      type="button"
-                      onClick={() => handleRemoveExtraCharge(charge.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 transition-colors cursor-pointer"
-                      title="Remove charge"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
                   </div>
-                ))}
 
-                <div className="flex items-center justify-between pt-1">
-                  <button
-                    type="button"
-                    onClick={() => handleAddExtraCharge('', 0)}
-                    className="text-[11px] font-bold text-blue-600 hover:text-blue-800 flex items-center gap-1 cursor-pointer"
-                  >
-                    <span>+ Add Another Custom Charge</span>
-                  </button>
-                  <span className="text-[11px] text-slate-400">
-                    Standard 18% GST applies to additional charges.
-                  </span>
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">
+                      Warranty &amp; Quality Assurances
+                    </span>
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 space-y-2 text-slate-700 text-[11px]">
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span><strong>10-Year Warranty</strong> on UPVC profiles against UV yellowing</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span><strong>1-Year Warranty</strong> on rollers, locks &amp; hardware</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                        <span>Reinforced with Hot-Dip Galvanized Steel (GI 1.2mm)</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div>
+                    <span className="text-[11px] font-bold text-slate-500 uppercase block mb-1">
+                      Fabrication &amp; Delivery Timeline
+                    </span>
+                    <div className="bg-slate-50 rounded-xl p-3 border border-slate-200 text-slate-700 text-[11px] flex items-center justify-between">
+                      <span className="font-medium">Estimated Dispatch:</span>
+                      <strong className="text-blue-700 font-semibold">10 to 14 Working Days</strong>
+                    </div>
+                  </div>
                 </div>
               </div>
-            )}
+            </div>
           </div>
 
           {/* Fixed Quotation Summary & Action Card at the end of Quotation Table (like Invoice) */}
