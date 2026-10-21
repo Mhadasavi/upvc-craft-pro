@@ -1,5 +1,6 @@
 import { BusinessProfile, Customer, ExtraCharge, Invoice, Quotation, QuotationItem, WorkshopCutItem } from '../types';
 import { formatINR } from './calculations';
+import { generateElevationSvgString } from './elevationSvg';
 
 /**
  * Universal print handler that works in:
@@ -26,18 +27,41 @@ export function executePrint(printableElementId?: string): boolean {
 /**
  * Download a standalone, self-contained printable HTML document
  * that can be opened in any browser and printed or saved as PDF cleanly.
+ * Robust against argument order swapping.
  */
-export function downloadPrintableHtml(filename: string, htmlContent: string): void {
+export function downloadPrintableHtml(param1: string, param2: string): void {
   try {
-    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
+    let filename = param1;
+    let htmlContent = param2;
+
+    // Detect if param1 is HTML content and param2 is filename
+    if (
+      param1.includes('<html') ||
+      param1.includes('<!DOCTYPE') ||
+      param1.includes('<div') ||
+      param1.includes('<table') ||
+      param1.length > 250
+    ) {
+      htmlContent = param1;
+      filename = param2;
+    }
+
+    const safeFilename =
+      filename && filename.trim().length > 0
+        ? filename.endsWith('.html')
+          ? filename
+          : `${filename}.html`
+        : 'quotation-document.html';
+
+    const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.setAttribute('download', filename.endsWith('.html') ? filename : `${filename}.html`);
+    link.setAttribute('download', safeFilename);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    URL.revokeObjectURL(url);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
   } catch (err) {
     console.error('Failed to download printable HTML file', err);
   }
@@ -434,24 +458,28 @@ export function generateQuotationPrintHtml(
   profile: BusinessProfile,
   extraCharges: ExtraCharge[] = []
 ): string {
-  const itemsSubtotal = items.reduce((acc, i) => acc + i.itemTotal, 0);
-  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
-  const taxableSubtotal = itemsSubtotal + extraChargesTotal;
-  const gst = Math.round(taxableSubtotal * 0.18 * 100) / 100;
-  const grandTotal = taxableSubtotal + gst;
   const totalUnits = items.reduce((acc, i) => acc + i.quantity, 0);
   const totalArea = items.reduce((acc, i) => acc + i.totalAreaSqFt, 0);
 
   const anyFitting = items.some((i) => i.accessories.siteFitting);
-  const fittingRateTotal = items.reduce(
+  const siteFittingTotal = items.reduce(
     (sum, i) =>
       sum + (i.accessories.siteFitting ? i.totalAreaSqFt * (i.fittingCostPerSqFt ?? 40) : 0),
     0
   );
+  const materialBaseTotal = items.reduce((sum, i) => {
+    const fittingCost = i.accessories.siteFitting ? i.totalAreaSqFt * (i.fittingCostPerSqFt ?? 40) : 0;
+    return sum + (i.itemTotal - fittingCost);
+  }, 0);
+  const extraChargesTotal = extraCharges.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
+  const taxableSubtotal = materialBaseTotal + siteFittingTotal + extraChargesTotal;
+  const gst = Math.round(taxableSubtotal * 0.18 * 100) / 100;
+  const grandTotal = taxableSubtotal + gst;
+
   const fittingScopeText = anyFitting
-    ? fittingRateTotal === 0
-      ? 'Site Installation & Weather Sealing (Included Free)'
-      : 'On-Site Fitting & Silicone Sealing Included'
+    ? siteFittingTotal === 0
+      ? 'Site Installation & Weather Sealing (Included Free in Scope)'
+      : `On-Site Fitting & Silicone Sealing Included (₹${siteFittingTotal.toLocaleString('en-IN')})`
     : 'Supply Only (No on-site fitting)';
 
   const itemRows = items
@@ -459,9 +487,27 @@ export function generateQuotationPrintHtml(
       (item, idx) => `
       <tr>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-family: monospace;">${idx + 1}</td>
+        <td style="padding: 8px 6px; border-bottom: 1px solid #e2e8f0; text-align: center; width: 160px; vertical-align: middle;">
+          <div style="width: 155px; height: 112px; margin: 0 auto; background: #ffffff; border: 1px solid #cbd5e1; border-radius: 8px; padding: 2px; box-sizing: border-box; display: flex; align-items: center; justify-content: center; box-shadow: 0 1px 2px rgba(0,0,0,0.05);">
+            ${generateElevationSvgString(item)}
+          </div>
+          <div style="font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, monospace; font-size: 11px; font-weight: 800; color: #1e3a8a; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 4px; padding: 2px 6px; margin: 4px auto 0 auto; display: inline-block; letter-spacing: 0.3px;">
+            ${item.widthInInches}" W × ${item.heightInInches}" H
+          </div>
+        </td>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0;">
           <div style="font-weight: bold; color: #0f172a;">${item.name}</div>
-          <div style="font-size: 11px; color: #64748b;">${item.locationTag || 'General'} • ${item.profileBrand} • ${item.glassPackage}</div>
+          <div style="font-size: 11px; color: #64748b; line-height: 1.4;">
+            ${item.locationTag || 'General'} • ${item.profileBrand} • ${item.glassPackage}
+            ${item.accessories.mosquitoMesh ? ' • SS304 Mesh' : ''}
+            ${
+              item.accessories.siteFitting
+                ? (item.fittingCostPerSqFt ?? 40) === 0
+                  ? ' • <strong style="color: #047857;">Fitting: Included Free</strong>'
+                  : ` • <strong>Fitting: ₹${item.fittingCostPerSqFt ?? 40}/sq.ft</strong>`
+                : ' • <em>Supply Only (No Fitting)</em>'
+            }
+          </div>
         </td>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; font-family: monospace;">${item.widthInInches}" × ${item.heightInInches}"</td>
         <td style="padding: 8px 10px; border-bottom: 1px solid #e2e8f0; text-align: center; font-weight: bold;">${item.quantity}</td>
@@ -495,6 +541,15 @@ export function generateQuotationPrintHtml(
       </style>
     </head>
     <body>
+      <div class="no-print" style="margin-bottom: 16px; padding: 10px 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; display: flex; justify-content: space-between; align-items: center;">
+        <div style="font-size: 12px; font-weight: 600; color: #1e40af;">
+          📄 <strong>uPVC Craft Pro</strong> — Official Quotation Specification Sheet (${quoteNumber})
+        </div>
+        <button onclick="window.print()" style="cursor: pointer; background: #2563eb; color: #ffffff; border: none; padding: 6px 14px; border-radius: 6px; font-size: 12px; font-weight: 700;">
+          🖨️ Print / Save as PDF
+        </button>
+      </div>
+
       <div class="header">
         <div>
           <h1 style="margin: 0; font-size: 20px; color: #0f172a;">${profile.shopName}</h1>
@@ -538,7 +593,8 @@ export function generateQuotationPrintHtml(
         <table>
           <thead>
             <tr style="background: #f1f5f9; text-align: left; font-size: 10.5px; text-transform: uppercase; color: #475569;">
-              <th style="padding: 8px 10px; border-bottom: 2px solid #cbd5e1; text-align: center;">#</th>
+              <th style="padding: 8px 10px; border-bottom: 2px solid #cbd5e1; text-align: center; width: 36px;">#</th>
+              <th style="padding: 8px 6px; border-bottom: 2px solid #cbd5e1; text-align: center; width: 160px;">Elevation (CAD)</th>
               <th style="padding: 8px 10px; border-bottom: 2px solid #cbd5e1;">Product Specification</th>
               <th style="padding: 8px 10px; border-bottom: 2px solid #cbd5e1;">Dimensions</th>
               <th style="padding: 8px 10px; border-bottom: 2px solid #cbd5e1; text-align: center;">Qty</th>
@@ -569,8 +625,20 @@ export function generateQuotationPrintHtml(
         <div class="box" style="flex: 1;">
           <table style="font-size: 11px;">
             <tr>
-              <td style="padding: 4px 0;">Material &amp; Fabrication:</td>
-              <td class="text-right font-mono" style="font-weight: 600;">₹${itemsSubtotal.toLocaleString('en-IN')}</td>
+              <td style="padding: 4px 0;">Material &amp; Fabrication Base:</td>
+              <td class="text-right font-mono" style="font-weight: 600;">₹${materialBaseTotal.toLocaleString('en-IN')}</td>
+            </tr>
+            <tr>
+              <td style="padding: 4px 0;">Site Fitting &amp; Silicone Sealing:</td>
+              <td class="text-right font-mono" style="font-weight: 600; color: ${siteFittingTotal === 0 ? '#047857' : '#0f172a'};">
+                ${
+                  anyFitting
+                    ? siteFittingTotal === 0
+                      ? '₹0 (Included Free in Scope)'
+                      : `₹${siteFittingTotal.toLocaleString('en-IN')}`
+                    : '₹0 (Supply Only)'
+                }
+              </td>
             </tr>
             ${extraCharges
               .map(

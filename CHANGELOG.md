@@ -9,6 +9,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ## [2026-10-21]
 
 ### Added
+- **High-Legibility Enlarged Elevation CAD & Measurement Badges**:
+  - Enlarged CAD elevation diagrams to 155px × 112px (2.4x display area) in both the Print Preview modal and downloaded documents.
+  - Increased dimension typography with bold 10.5px white font inside high-contrast navy pills, with clear boundary ticks and dimension lines.
+  - Added dedicated high-contrast measurement badges (e.g., `48" W × 60" H`) directly underneath the CAD diagrams in table schedules for crystal-clear legibility.
+- **Vector Elevation CAD Diagrams with Dimension Annotations**:
+  - Built standalone SVG elevation generator (`generateElevationSvgString` & `ElevationDiagram`) featuring proportional aspect ratio scaling, UPVC profile foils (White, Wooden, Grey), sash overlaps, sliding directional arrows, casement swing triangles, and louver ventilator blades.
+  - Real-time engineering dimension annotations on both axes: horizontal width dimension line with boundary ticks and width pill (`W"`), and vertical height dimension line with boundary ticks and height pill (`H"`).
+  - Integrated live elevation diagrams into the **Print & PDF Preview Modal** (`PrintQuoteModal`), replacing static thumbnails.
+  - Added the **"Elevation (CAD)"** column into downloaded standalone quotation documents (`generateQuotationPrintHtml`), embedding crisp vector diagrams directly into offline HTML/PDF quotation schedules.
 - **Flexible Site Fitting & Weather Sealing Fee**:
   - Added support for "Free / Waived (₹0)" site fitting while keeping installation and silicone weather sealing in the written scope of work.
   - Support for custom rates per sq.ft (e.g. ₹0, ₹40 standard rate, or custom numeric values).
@@ -43,11 +52,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ### Changed
 - **Compact Welcome Header**: Reduced oversized purple banner into a sleek, functional header with a primary "+ New Quotation" action button to maximize vertical screen space.
+- **Unified Review Step Ledger**: Removed duplicate "Comprehensive Financial Summary" card and duplicate Additional Charges block from Step 3, anchoring single authoritative `SummaryBar` and dedicated commercial warranty panel.
+- **Detailed Print Breakdown**: Itemized Material Fabrication Base and Site Fitting & Weather Sealing (with Free / Waived and Supply Only indicators) separately instead of lumping into a single figure.
 - **Invoice Conversion Integration**: Enhanced quotation-to-invoice finalization to carry over all extra charges, fitting specifications, and line items without race conditions.
 
 ### Fixed
-- **Duplicate Plus Icon**: Removed the redundant duplicate `+` sign on the "+ New Quotation" primary CTA button.
-- **Print Preview Modal Syntax**: Fixed leftover duplicate code in `PrintQuoteModal.tsx` download handler ensuring clean Vite compilation.
+- **Persistent Quick Presets Bar**: Quick preset buttons (`+ Transportation`, `+ Loading & Unloading`, `+ Crane / Hoisting`, `+ Custom Fee`) now remain permanently visible after selecting a preset, allowing users to add multiple presets consecutively without the preset buttons disappearing.
+- **Duplicate Plus Icon**: Removed the redundant duplicate `+` sign on "+ New Quotation" and "+ Add Charge" buttons.
+- **Context-Aware Extra Charge Icons**: Custom charges no longer default to the transportation truck icon; icons dynamically resolve based on charge label (Transportation, Loading/Handling, Crane/Hoisting, or generic Tag).
+- **Waive Off Button Alignment**: Positioned the "Waive Off" toggle directly alongside the "Site Fitting & Weather Seal:" label on the left, keeping the monetary value cleanly aligned on the right.
+- **Download Document Handler**: Fixed inverted argument bug in `downloadPrintableHtml` where HTML content was passed as the filename, causing downloads to break or save corrupted files.
+- **Interactive Browser Print Header**: Added top toolbar button in downloaded standalone HTML files allowing direct 1-click printing and saving as PDF.
 
 ---
 
