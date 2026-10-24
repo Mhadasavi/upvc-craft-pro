@@ -82,7 +82,7 @@ interface NewQuotationBuilderProps {
   onUpdateValidUntil?: (validUntil: string) => void;
   onSaveQuotation?: (status?: QuotationStatus, customDate?: string, customValidUntil?: string, extraCharges?: ExtraCharge[]) => void;
   onSendWhatsApp: () => void;
-  onFinalizeInvoice: () => void;
+  onFinalizeInvoice: (targetQuote?: Quotation) => void;
 }
 
 export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
@@ -118,6 +118,25 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
   // Extra charges state (Transportation, Crane, Scaffolding, Custom line items)
   const [extraCharges, setExtraCharges] = useState<ExtraCharge[]>(() => initialExtraCharges || []);
   const [fittingRatePerSqFt, setFittingRatePerSqFt] = useState<number>(40);
+
+  // Directly construct full quotation and trigger GST invoice conversion
+  const handleFinalizeFromSummary = () => {
+    if (!items || items.length === 0) {
+      alert('Please add at least one window or door to the quotation before creating a GST invoice.');
+      return;
+    }
+    const currentQuoteObj: Quotation = {
+      id: `quo-${quoteNumber}`,
+      quoteNumber,
+      date: quoteDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+      validUntil: validUntil || '',
+      customer,
+      items,
+      extraCharges,
+      status: 'invoiced',
+    };
+    onFinalizeInvoice(currentQuoteObj);
+  };
 
   useEffect(() => {
     if (initialExtraCharges) {
@@ -871,31 +890,11 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
       {currentStep === 1 && (
         <div className="max-w-[1520px] w-full mx-auto p-6 flex flex-col gap-6">
           {/* Step 1 Header Card */}
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 font-mono font-bold text-xs border border-blue-200">
-                  {quoteNumber}
-                </span>
-                <h2 className="text-xl font-bold text-slate-900">Step 1: Customer Details &amp; Job Information</h2>
-              </div>
-              <p className="text-xs text-slate-500 mt-1">
-                Please assign this quotation to a client. Choose an existing client from your database or enter new customer details.
-              </p>
-            </div>
-
-            {/* Quick Date Display */}
-            <div className="flex items-center gap-3 bg-slate-50 border border-slate-200 px-4 py-2.5 rounded-xl text-xs">
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-slate-500">Quotation Date</span>
-                <span className="font-mono font-bold text-slate-800">{currentQuoteDate}</span>
-              </div>
-              <div className="h-6 w-px bg-slate-200" />
-              <div className="flex flex-col">
-                <span className="text-[10px] uppercase font-bold text-slate-500">Valid Until</span>
-                <span className="font-mono font-bold text-emerald-700">{currentValidUntil}</span>
-              </div>
-            </div>
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-xs p-5">
+            <h2 className="text-xl font-bold text-slate-900">Step 1: Customer Details &amp; Job Information</h2>
+            <p className="text-xs text-slate-500 mt-1">
+              Please assign this quotation to a client. Choose an existing client from your database or enter new customer details.
+            </p>
           </div>
 
           {/* Mode Selector & Selection Stage */}
@@ -1450,7 +1449,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
             onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil, extraCharges)}
             onSavePdf={() => setIsPrintQuoteOpen(true)}
             onSendWhatsApp={onSendWhatsApp}
-            onFinalizeInvoice={onFinalizeInvoice}
+            onFinalizeInvoice={handleFinalizeFromSummary}
           />
         </div>
       )}
@@ -1617,7 +1616,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
             onSaveQuotation={() => onSaveQuotation && onSaveQuotation('draft', currentQuoteDate, currentValidUntil, extraCharges)}
             onSavePdf={() => setIsPrintQuoteOpen(true)}
             onSendWhatsApp={onSendWhatsApp}
-            onFinalizeInvoice={onFinalizeInvoice}
+            onFinalizeInvoice={handleFinalizeFromSummary}
           />
         </div>
       )}
@@ -1649,6 +1648,7 @@ export const NewQuotationBuilder: React.FC<NewQuotationBuilderProps> = ({
         items={items}
         profile={profile}
         extraCharges={extraCharges}
+        onConvertToInvoice={handleFinalizeFromSummary}
       />
     </div>
   );

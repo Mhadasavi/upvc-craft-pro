@@ -101,6 +101,10 @@ export interface Customer {
   city: string;
   gstin?: string;
   email?: string;
+  shippingAddress?: string;
+  shippingCity?: string;
+  shippingState?: string;
+  sameAsBilling?: boolean;
 }
 
 export type QuotationStatus = 'draft' | 'sent' | 'confirmed' | 'invoiced';
@@ -171,6 +175,9 @@ export interface BusinessProfile {
   upiId: string;
   rateTier: string;
   termsAndConditions: string[];
+  logoUrl?: string;
+  companyLogoUrl?: string; // Official company logo printed on quotations and invoices
+  avatarUrl?: string; // User profile photo shown in app header only (never printed on documents)
 }
 
 export interface RateSheetItem {
@@ -199,6 +206,17 @@ export type QuotationNumberFormat =
   | 'full-fy'       // QUO-2025-26-1049
   | 'custom';       // User-defined template
 
+export type QuotationPrintTemplate = 'architectural' | 'compact' | 'premium' | 'workshop';
+export type InvoicePrintTemplate = 'standard' | 'compact' | 'premium';
+
+export interface PrintOptions {
+  template?: QuotationPrintTemplate | InvoicePrintTemplate;
+  showCadDiagrams?: boolean;
+  showBankDetails?: boolean;
+  showTerms?: boolean;
+  showPaymentHistory?: boolean;
+}
+
 export interface QuotationSettings {
   numberFormat: QuotationNumberFormat;
   prefix: string;
@@ -208,6 +226,7 @@ export interface QuotationSettings {
   defaultDeliveryTimeline: string;
   defaultPaymentTerms: string;
   defaultNotes: string;
+  defaultTemplate?: QuotationPrintTemplate;
 }
 
 export interface InvoiceSettings {
@@ -219,6 +238,7 @@ export interface InvoiceSettings {
   defaultGstRate: number;
   hsnCode: string;
   declaration: string;
+  defaultTemplate?: InvoicePrintTemplate;
 }
 
 export interface ProductSettings {

@@ -8,7 +8,7 @@ import {
   Quotation,
   QuotationItem,
 } from '../../types';
-import { formatINR, getNextInvoiceNumber } from '../../utils/calculations';
+import { formatINR, getNextInvoiceNumber, dateStringToIso, isoToDisplayDate } from '../../utils/calculations';
 import {
   lookupGstDetails,
   parseGstinStructure,
@@ -29,6 +29,7 @@ import {
   CreditCard,
   FileCheck,
   Truck,
+  FileText,
 } from 'lucide-react';
 
 interface CreateInvoiceViewProps {
@@ -52,7 +53,7 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
   const [invoiceNumber] = useState<string>(
     () => getNextInvoiceNumber(invoices)
   );
-  const [invoiceDate] = useState<string>(() =>
+  const [invoiceDate, setInvoiceDate] = useState<string>(() =>
     new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
   );
   const [dueDate, setDueDate] = useState<string>(() => {
@@ -78,6 +79,14 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
   );
   const [customerCity, setCustomerCity] = useState('Pune');
   const [customerState, setCustomerState] = useState('Maharashtra');
+
+  // Shipping details state
+  const [sameAsBilling, setSameAsBilling] = useState<boolean>(true);
+  const [shippingAddress, setShippingAddress] = useState<string>(
+    'Flat 402, Sharma Residency, Near Balewadi High Street, Baner'
+  );
+  const [shippingCity, setShippingCity] = useState<string>('Pune');
+  const [shippingState, setShippingState] = useState<string>('Maharashtra');
 
   // Source selection: From Quotation or Custom
   const [selectedQuoteId, setSelectedQuoteId] = useState<string>('');
@@ -128,6 +137,9 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
   const [customChargeLabel, setCustomChargeLabel] = useState('');
   const [customChargeAmount, setCustomChargeAmount] = useState<number>(0);
   const [showAddChargeForm, setShowAddChargeForm] = useState(false);
+
+  // Notes / Special Terms state
+  const [invoiceNotes, setInvoiceNotes] = useState<string>('');
 
   const handleAddExtraCharge = (label: string, amount: number) => {
     if (!label.trim() || amount <= 0) return;
@@ -186,6 +198,11 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
       setCustomerCity(details.city);
       setCustomerState(details.state);
       setCustomerMobile(details.mobile);
+      if (sameAsBilling) {
+        setShippingAddress(details.address);
+        setShippingCity(details.city);
+        setShippingState(details.state);
+      }
       setGstVerifiedMessage(`✓ Verified: Auto-populated ${details.companyName} (${details.city}, ${details.state})`);
     } else if (clean.length === 15) {
       setGstVerifiedMessage(`✓ Valid 15-digit GST format verified. Enter actual company & site details below.`);
@@ -210,12 +227,24 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
       setCustomerMobile(quote.customer.mobile);
       setCustomerAddress(quote.customer.address);
       setCustomerCity(quote.customer.city);
+      const isSame =
+        quote.customer.sameAsBilling !== false &&
+        (!quote.customer.shippingAddress || quote.customer.shippingAddress === quote.customer.address);
+      setSameAsBilling(isSame);
+      setShippingAddress(quote.customer.shippingAddress || quote.customer.address);
+      setShippingCity(quote.customer.shippingCity || quote.customer.city);
+      setShippingState(quote.customer.shippingState || 'Maharashtra');
       if (quote.customer.gstin) {
         handleGstChange(quote.customer.gstin);
       }
 
       // Populate extra charges if any
       setExtraCharges(quote.extraCharges ? [...quote.extraCharges] : []);
+
+      // Populate notes if available
+      if (quote.notes) {
+        setInvoiceNotes(quote.notes);
+      }
 
       // Populate items
       setInvoiceItems(
@@ -299,6 +328,10 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
       address: customerAddress,
       city: customerCity,
       gstin: gstinInput || undefined,
+      shippingAddress: sameAsBilling ? customerAddress : (shippingAddress.trim() || customerAddress),
+      shippingCity: sameAsBilling ? customerCity : (shippingCity.trim() || customerCity),
+      shippingState: sameAsBilling ? customerState : (shippingState.trim() || customerState),
+      sameAsBilling,
     };
 
     const initialPayments: PaymentRecord[] = [];
@@ -362,6 +395,7 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
         reinforcementThickness: '1.2mm GI',
       })),
       extraCharges: extraCharges.length > 0 ? extraCharges : undefined,
+      notes: invoiceNotes.trim() || undefined,
       totalAmount: grandTotal,
       advanceReceived: advanceAmount,
       balanceDue,
@@ -548,33 +582,120 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
               </div>
 
               <div className="sm:col-span-2">
-                <label className="font-bold text-slate-700 block mb-0.5">Registered Site Address</label>
+                <label className="font-bold text-slate-700 block mb-0.5">Billing Address (Registered Site)</label>
                 <textarea
                   rows={2}
                   className="w-full p-2 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white text-xs"
                   value={customerAddress}
-                  onChange={(e) => setCustomerAddress(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomerAddress(val);
+                    if (sameAsBilling) setShippingAddress(val);
+                  }}
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-0.5">City</label>
+                <label className="font-bold text-slate-700 block mb-0.5">Billing City</label>
                 <input
                   type="text"
                   className="w-full h-9 px-3 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
                   value={customerCity}
-                  onChange={(e) => setCustomerCity(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomerCity(val);
+                    if (sameAsBilling) setShippingCity(val);
+                  }}
                 />
               </div>
 
               <div>
-                <label className="font-bold text-slate-700 block mb-0.5">State (GST State Code)</label>
+                <label className="font-bold text-slate-700 block mb-0.5">Billing State (GST State Code)</label>
                 <input
                   type="text"
                   className="w-full h-9 px-3 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 bg-white"
                   value={customerState}
-                  onChange={(e) => setCustomerState(e.target.value)}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    setCustomerState(val);
+                    if (sameAsBilling) setShippingState(val);
+                  }}
                 />
+              </div>
+
+              {/* Shipping Address Option */}
+              <div className="sm:col-span-2 pt-2.5 mt-1 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-2">
+                  <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <Truck className="w-4 h-4 text-blue-700" />
+                    <span>Shipping Address (Place of Delivery)</span>
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-blue-800 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2.5 py-1 rounded-md border border-blue-200 select-none transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={sameAsBilling}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSameAsBilling(checked);
+                        if (checked) {
+                          setShippingAddress(customerAddress);
+                          setShippingCity(customerCity);
+                          setShippingState(customerState);
+                        }
+                      }}
+                      className="rounded text-blue-600 focus:ring-blue-500 w-3.5 h-3.5"
+                    />
+                    <span>Same as billing address</span>
+                  </label>
+                </div>
+
+                {!sameAsBilling ? (
+                  <div className="space-y-2 pt-1 animate-in fade-in">
+                    <div>
+                      <label className="font-semibold text-slate-600 text-[11px] block mb-0.5">
+                        Site / Delivery Address
+                      </label>
+                      <textarea
+                        rows={2}
+                        placeholder="Enter physical site delivery / installation address"
+                        className="w-full p-2 rounded-lg border border-blue-300 bg-blue-50/20 text-slate-900 focus:outline-none focus:ring-1 focus:ring-blue-600 text-xs"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="font-semibold text-slate-600 text-[11px] block mb-0.5">Shipping City</label>
+                        <input
+                          type="text"
+                          placeholder="Delivery City"
+                          className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+                          value={shippingCity}
+                          onChange={(e) => setShippingCity(e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <label className="font-semibold text-slate-600 text-[11px] block mb-0.5">Shipping State</label>
+                        <input
+                          type="text"
+                          placeholder="Delivery State"
+                          className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-slate-900 text-xs bg-white focus:outline-none focus:ring-1 focus:ring-blue-600"
+                          value={shippingState}
+                          onChange={(e) => setShippingState(e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2.5 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-slate-600 text-xs flex items-center justify-between">
+                    <span className="truncate">
+                      Destination: <strong className="text-slate-800">{customerAddress || 'Billing Address'}, {customerCity}</strong>
+                    </span>
+                    <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded shrink-0 ml-2">
+                      Same as Billing
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -610,15 +731,20 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
               <span className="font-mono text-sm font-bold text-blue-700">{invoiceNumber}</span>
             </div>
             <div>
-              <span className="text-[11px] text-slate-500 uppercase font-bold block">Invoice Date</span>
-              <span className="font-mono text-xs font-semibold text-slate-800">{invoiceDate}</span>
+              <label className="text-[11px] text-slate-500 uppercase font-bold block mb-0.5">Invoice Date</label>
+              <input
+                type="date"
+                className="h-8 px-2 rounded border border-slate-300 font-mono text-xs text-slate-800 bg-white"
+                value={dateStringToIso(invoiceDate)}
+                onChange={(e) => setInvoiceDate(isoToDisplayDate(e.target.value))}
+              />
             </div>
             <div>
               <label className="text-[11px] text-slate-500 uppercase font-bold block mb-0.5">Payment Due Date</label>
               <input
                 type="date"
-                className="h-8 px-2 rounded border border-slate-300 font-mono text-xs text-slate-800"
-                value={dueDate}
+                className="h-8 px-2 rounded border border-slate-300 font-mono text-xs text-slate-800 bg-white"
+                value={dateStringToIso(dueDate)}
                 onChange={(e) => setDueDate(e.target.value)}
               />
             </div>
@@ -815,6 +941,24 @@ export const CreateInvoiceView: React.FC<CreateInvoiceViewProps> = ({
                 No additional freight, lifting, or miscellaneous charges added. Click presets above if needed.
               </div>
             )}
+          </div>
+
+          {/* Invoice Notes & Special Terms Card */}
+          <div className="bg-white rounded-xl shadow-xs border border-slate-200 p-4 flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-1">
+              <span className="text-xs font-bold text-slate-800 uppercase tracking-wide flex items-center gap-1.5">
+                <FileText className="w-4 h-4 text-blue-600" />
+                Invoice Notes &amp; Special Terms
+              </span>
+              <span className="text-[11px] text-slate-400">Printed on official Tax Invoice &amp; Customer records</span>
+            </div>
+            <textarea
+              rows={2}
+              placeholder="Enter special warranty, site installation terms, glass delivery notes, or payment instructions..."
+              className="w-full text-xs font-mono rounded-lg border border-slate-200 p-2.5 bg-slate-50/50 text-slate-900 focus:bg-white focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-colors placeholder:text-slate-400 font-normal resize-y"
+              value={invoiceNotes}
+              onChange={(e) => setInvoiceNotes(e.target.value)}
+            />
           </div>
 
           {/* GST Calculation & Advance Ledger Card */}

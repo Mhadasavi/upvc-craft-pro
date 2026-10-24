@@ -1,11 +1,337 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @layer base {
   body {
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     background-color: #f8f9ff;
     color: #0b1c30;
+    transition: background-color 0.2s ease, color 0.2s ease;
   }
+
+  html.dark body {
+    background-color: #0b1120;
+    color: #f1f5f9;
+  }
+}
+
+/* Comprehensive Dark Mode Theme Support */
+html.dark {
+  color-scheme: dark;
+}
+
+html.dark body {
+  background-color: #0b1120;
+  color: #f1f5f9;
+}
+
+/* Header in dark mode */
+html.dark header {
+  background-color: rgba(15, 23, 42, 0.95) !important;
+  border-color: #1e293b !important;
+}
+
+/* Cards & containers base fallbacks with :where for 0-specificity, so explicit dark: classes cleanly take precedence */
+:where(html.dark) :where(.bg-white:not(.printable-sheet, .printable-sheet *, .printable-modal-sheet, .printable-modal-sheet *)) {
+  background-color: #0f172a;
+}
+
+:where(html.dark) :where(.bg-slate-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: #162032;
+}
+
+:where(html.dark) :where(.bg-slate-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: #1e293b;
+}
+
+:where(html.dark) :where(.bg-slate-200:not(.printable-sheet, .printable-sheet *)) {
+  background-color: #334155;
+}
+
+:where(html.dark) :where(.border-slate-200:not(.printable-sheet, .printable-sheet *)) {
+  border-color: #1e293b;
+}
+
+:where(html.dark) :where(.border-slate-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: #334155;
+}
+
+:where(html.dark) :where(.border-slate-100:not(.printable-sheet, .printable-sheet *)) {
+  border-color: #1e293b;
+}
+
+:where(html.dark) :where(.divide-slate-200:not(.printable-sheet, .printable-sheet *)) > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b;
+}
+
+:where(html.dark) :where(.divide-slate-100:not(.printable-sheet, .printable-sheet *)) > :not([hidden]) ~ :not([hidden]) {
+  border-color: #1e293b;
+}
+
+:where(html.dark) :where(.text-slate-900:not(.printable-sheet, .printable-sheet *)) {
+  color: #f8fafc;
+}
+
+:where(html.dark) :where(.text-slate-800:not(.printable-sheet, .printable-sheet *)) {
+  color: #f1f5f9;
+}
+
+:where(html.dark) :where(.text-slate-700:not(.printable-sheet, .printable-sheet *)) {
+  color: #cbd5e1;
+}
+
+:where(html.dark) :where(.text-slate-600:not(.printable-sheet, .printable-sheet *)) {
+  color: #94a3b8;
+}
+
+:where(html.dark) :where(.text-slate-500:not(.printable-sheet, .printable-sheet *)) {
+  color: #64748b;
+}
+
+/* Opacity tint utilities in dark mode */
+:where(html.dark) :where([class*="bg-slate-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(22, 32, 50, 0.7);
+}
+
+:where(html.dark) :where([class*="bg-indigo-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(79, 70, 229, 0.12);
+}
+
+:where(html.dark) :where([class*="bg-emerald-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(16, 185, 129, 0.12);
+}
+
+:where(html.dark) :where([class*="bg-blue-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(37, 99, 235, 0.12);
+}
+
+:where(html.dark) :where([class*="bg-amber-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(245, 158, 11, 0.12);
+}
+
+:where(html.dark) :where([class*="bg-purple-50/"]:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(168, 85, 247, 0.12);
+}
+
+:where(html.dark) :where([class*="border-slate-200/"]:not(.printable-sheet, .printable-sheet *)) {
+  border-color: #1e293b;
+}
+
+:where(html.dark) :where([class*="border-blue-200/"]:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+/* Pastel tag & badge backgrounds in dark mode */
+:where(html.dark) :where(.bg-blue-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(37, 99, 235, 0.15);
+}
+:where(html.dark) :where(.bg-blue-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(37, 99, 235, 0.25);
+}
+:where(html.dark) :where(.bg-indigo-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(79, 70, 229, 0.15);
+}
+:where(html.dark) :where(.bg-indigo-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(79, 70, 229, 0.25);
+}
+:where(html.dark) :where(.bg-emerald-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(16, 185, 129, 0.15);
+}
+:where(html.dark) :where(.bg-emerald-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(16, 185, 129, 0.25);
+}
+:where(html.dark) :where(.bg-amber-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(245, 158, 11, 0.15);
+}
+:where(html.dark) :where(.bg-amber-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(245, 158, 11, 0.25);
+}
+:where(html.dark) :where(.bg-purple-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(168, 85, 247, 0.15);
+}
+:where(html.dark) :where(.bg-purple-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(168, 85, 247, 0.25);
+}
+:where(html.dark) :where(.bg-rose-50:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.bg-red-50:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(239, 68, 68, 0.15);
+}
+:where(html.dark) :where(.bg-rose-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.bg-red-100:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(239, 68, 68, 0.25);
+}
+
+/* Pastel borders in dark mode */
+:where(html.dark) :where(.border-blue-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-blue-200:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-blue-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+:where(html.dark) :where(.border-indigo-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-indigo-200:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-indigo-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+:where(html.dark) :where(.border-emerald-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-emerald-200:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-emerald-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(16, 185, 129, 0.3);
+}
+:where(html.dark) :where(.border-amber-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-amber-200:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-amber-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+:where(html.dark) :where(.border-purple-100:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-purple-200:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.border-purple-300:not(.printable-sheet, .printable-sheet *)) {
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+/* High-contrast colored text in dark mode */
+:where(html.dark) :where(.text-blue-700:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-blue-800:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-blue-900:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-blue-950:not(.printable-sheet, .printable-sheet *)) {
+  color: #93c5fd;
+}
+:where(html.dark) :where(.text-indigo-700:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-indigo-800:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-indigo-900:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-indigo-950:not(.printable-sheet, .printable-sheet *)) {
+  color: #a5b4fc;
+}
+:where(html.dark) :where([class*="text-indigo-700/"]:not(.printable-sheet, .printable-sheet *)) {
+  color: rgba(165, 180, 252, 0.85);
+}
+:where(html.dark) :where(.text-emerald-700:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-emerald-800:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-emerald-900:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-emerald-950:not(.printable-sheet, .printable-sheet *)) {
+  color: #6ee7b7;
+}
+:where(html.dark) :where([class*="text-emerald-700/"]:not(.printable-sheet, .printable-sheet *)) {
+  color: rgba(110, 231, 183, 0.85);
+}
+:where(html.dark) :where(.text-amber-700:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-amber-800:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-amber-900:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-amber-950:not(.printable-sheet, .printable-sheet *)) {
+  color: #fcd34d;
+}
+:where(html.dark) :where(.text-purple-700:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-purple-800:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-purple-900:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.text-purple-950:not(.printable-sheet, .printable-sheet *)) {
+  color: #d8b4fe;
+}
+
+/* Hover states for pastel buttons and rows in dark mode */
+:where(html.dark) :where(.hover\:bg-blue-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(37, 99, 235, 0.22);
+}
+:where(html.dark) :where(.hover\:bg-blue-100:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(37, 99, 235, 0.32);
+}
+:where(html.dark) :where(.hover\:bg-indigo-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(79, 70, 229, 0.22);
+}
+:where(html.dark) :where(.hover\:bg-indigo-100:hover:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.hover\:bg-indigo-200:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(79, 70, 229, 0.32);
+}
+:where(html.dark) :where(.hover\:bg-emerald-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(16, 185, 129, 0.22);
+}
+:where(html.dark) :where(.hover\:bg-emerald-100:hover:not(.printable-sheet, .printable-sheet *)),
+:where(html.dark) :where(.hover\:bg-emerald-200:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(16, 185, 129, 0.32);
+}
+:where(html.dark) :where(.hover\:bg-amber-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(245, 158, 11, 0.22);
+}
+:where(html.dark) :where(.hover\:bg-purple-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(168, 85, 247, 0.22);
+}
+:where(html.dark) :where(.hover\:bg-slate-50:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: #1e293b;
+}
+:where(html.dark) :where([class*="hover:bg-slate-50/"]:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: rgba(30, 41, 59, 0.7);
+}
+:where(html.dark) :where(.hover\:bg-slate-100:hover:not(.printable-sheet, .printable-sheet *)) {
+  background-color: #273549;
+}
+
+/* Form inputs & controls */
+html.dark input:not([type="checkbox"]):not([type="radio"]):not(.printable-sheet *),
+html.dark select:not(.printable-sheet *),
+html.dark textarea:not(.printable-sheet *) {
+  background-color: #1e293b;
+  border-color: #334155;
+  color: #f8fafc;
+}
+
+html.dark input::placeholder,
+html.dark textarea::placeholder {
+  color: #64748b;
+}
+
+/* Modals */
+html.dark .printable-modal-overlay {
+  background-color: rgba(11, 17, 32, 0.75);
+}
+
+html.dark .printable-modal-container {
+  background-color: #0f172a;
+  border-color: #1e293b;
+}
+
+/* Ensure printable sheet stays pure white with accurate print simulation */
+html.dark .printable-sheet {
+  background-color: #ffffff !important;
+  color: #0f172a !important;
+}
+
+html.dark .printable-sheet * {
+  color: inherit;
+}
+
+html.dark .printable-sheet .bg-slate-50 {
+  background-color: #f8fafc !important;
+}
+
+html.dark .printable-sheet .bg-slate-100 {
+  background-color: #f1f5f9 !important;
+}
+
+html.dark .printable-sheet .border-slate-200 {
+  border-color: #e2e8f0 !important;
+}
+
+html.dark .printable-sheet .border-slate-300 {
+  border-color: #cbd5e1 !important;
+}
+
+html.dark .printable-sheet .text-slate-900 {
+  color: #0f172a !important;
+}
+
+html.dark .printable-sheet .text-slate-800 {
+  color: #1e293b !important;
+}
+
+html.dark .printable-sheet .text-slate-700 {
+  color: #334155 !important;
+}
+
+html.dark .printable-sheet .text-slate-600 {
+  color: #475569 !important;
+}
+
+html.dark .printable-sheet .text-slate-500 {
+  color: #64748b !important;
 }
 
 .font-mono,
@@ -31,6 +357,19 @@
 
 ::-webkit-scrollbar-thumb:hover {
   background: #737686;
+}
+
+/* Dark mode scrollbars */
+html.dark ::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+html.dark ::-webkit-scrollbar-thumb {
+  background: #334155;
+}
+
+html.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
 }
 
 /* Print Styles for official UPVC Quotation / Invoice printing */

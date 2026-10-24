@@ -290,7 +290,7 @@ export const SummaryBar: React.FC<SummaryBarProps> = ({
         </button>
 
         <button
-          onClick={onFinalizeInvoice}
+          onClick={() => onFinalizeInvoice()}
           className="h-10 px-5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold flex items-center gap-2 transition-all shadow-md active:scale-95 cursor-pointer"
           type="button"
         >

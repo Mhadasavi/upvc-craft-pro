@@ -43,8 +43,25 @@ import { InvoicesView } from './components/views/InvoicesView';
 import { SettingsView } from './components/views/SettingsView';
 import { CreateInvoiceView } from './components/views/CreateInvoiceView';
 import { PrintQuoteModal } from './components/modals/PrintQuoteModal';
+import { ThemeMode, getInitialTheme, applyTheme } from './utils/theme';
+import { LanguageProvider } from './context/LanguageContext';
 
-export default function App() {
+function AppContent() {
+  // Theme State (persisted to localStorage)
+  const [theme, setTheme] = useState<ThemeMode>(getInitialTheme);
+
+  useEffect(() => {
+    applyTheme(theme);
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => {
+      const next = prev === 'dark' ? 'light' : 'dark';
+      applyTheme(next);
+      return next;
+    });
+  };
+
   // Navigation State (defaults to 'dashboard' as main landing view)
   const [activeTab, setActiveTab] = useState<NavTab>('dashboard');
   const [searchQuery, setSearchQuery] = useState('');
@@ -102,9 +119,13 @@ export default function App() {
   const [invoices, setInvoices] = useState<Invoice[]>(() =>
     loadFromStorage(STORAGE_KEYS.INVOICES, INITIAL_INVOICES)
   );
-  const [rateSheet, setRateSheet] = useState<RateSheetItem[]>(() =>
-    loadFromStorage(STORAGE_KEYS.RATE_SHEET, INITIAL_RATE_SHEET)
-  );
+  const [focusedInvoiceId, setFocusedInvoiceId] = useState<string | null>(null);
+  const [rateSheet, setRateSheet] = useState<RateSheetItem[]>(() => {
+    const saved = loadFromStorage<RateSheetItem[]>(STORAGE_KEYS.RATE_SHEET, INITIAL_RATE_SHEET);
+    const existingIds = new Set(saved.map((r) => r.typologyId));
+    const missing = INITIAL_RATE_SHEET.filter((item) => !existingIds.has(item.typologyId));
+    return missing.length > 0 ? [...saved, ...missing] : saved;
+  });
 
   // Auto-sync collections to persistent database storage
   useEffect(() => {
@@ -211,10 +232,24 @@ export default function App() {
 
   // Finalize Quotation to Invoice
   const handleFinalizeInvoice = (targetQuote?: Quotation) => {
-    const itemsToUse = targetQuote ? targetQuote.items : quotationItems;
-    const quoteNumToUse = targetQuote ? targetQuote.quoteNumber : activeQuoteNumber;
-    const customerToUse = targetQuote ? targetQuote.customer : currentCustomer;
-    const extraChargesToUse = targetQuote ? (targetQuote.extraCharges || []) : activeExtraCharges;
+    // Validate if targetQuote is a real Quotation object and not a SyntheticEvent
+    const isRealQuote = Boolean(
+      targetQuote &&
+      typeof targetQuote === 'object' &&
+      'items' in targetQuote &&
+      Array.isArray((targetQuote as Quotation).items)
+    );
+    const validQuote = isRealQuote ? (targetQuote as Quotation) : undefined;
+
+    const itemsToUse = validQuote ? validQuote.items : quotationItems;
+    const quoteNumToUse = validQuote ? validQuote.quoteNumber : activeQuoteNumber;
+    const customerToUse = validQuote ? validQuote.customer : currentCustomer;
+    const extraChargesToUse = validQuote ? (validQuote.extraCharges || []) : activeExtraCharges;
+
+    if (!itemsToUse || itemsToUse.length === 0) {
+      showToast('Please add at least one window or door to the quotation before creating a GST invoice!');
+      return;
+    }
 
     const itemsSubtotal = itemsToUse.reduce((acc, i) => acc + i.itemTotal, 0);
     const extraTotal = extraChargesToUse.reduce((acc, c) => acc + (Number(c.amount) || 0), 0);
@@ -236,6 +271,7 @@ export default function App() {
       customer: customerToUse,
       items: [...itemsToUse],
       extraCharges: extraChargesToUse.length > 0 ? [...extraChargesToUse] : undefined,
+      notes: validQuote?.notes || appSettings.quotation.defaultNotes || undefined,
       totalAmount: grandTotal,
       advanceReceived: 0,
       balanceDue: grandTotal,
@@ -245,11 +281,27 @@ export default function App() {
 
     setInvoices([newInvoice, ...invoices]);
 
-    // Update status of current quote in quotes list
-    setQuotations((prev) =>
-      prev.map((q) => (q.quoteNumber === quoteNumToUse ? { ...q, status: 'invoiced' } : q))
-    );
+    // Ensure quote is recorded in quotations list and marked as invoiced
+    setQuotations((prev) => {
+      const exists = prev.some((q) => q.quoteNumber === quoteNumToUse);
+      if (exists) {
+        return prev.map((q) => (q.quoteNumber === quoteNumToUse ? { ...q, status: 'invoiced' } : q));
+      } else {
+        const savedQuote: Quotation = {
+          id: `quo-${Date.now()}`,
+          quoteNumber: quoteNumToUse,
+          date: activeQuoteDate || new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
+          validUntil: activeQuoteValidUntil || calculateValidUntilDate(activeQuoteDate || '', 30),
+          customer: customerToUse,
+          items: [...itemsToUse],
+          extraCharges: extraChargesToUse.length > 0 ? [...extraChargesToUse] : undefined,
+          status: 'invoiced',
+        };
+        return [savedQuote, ...prev];
+      }
+    });
 
+    setFocusedInvoiceId(newInvoice.id);
     setActiveTab('invoices');
     showToast(`Invoice ${invNumber} generated successfully with 18% GST!`);
   };
@@ -527,13 +579,15 @@ export default function App() {
         shopCity={businessProfile.city}
         isCollapsed={isSidebarCollapsed}
         onToggleCollapse={handleToggleSidebar}
+        theme={theme}
+        onToggleTheme={handleToggleTheme}
       />
 
       {/* Main Workspace Frame (offset dynamic for collapsed vs expanded sidebar) */}
       <div
         className={`${
           isSidebarCollapsed ? 'pl-16' : 'pl-64'
-        } transition-all duration-300 ease-in-out flex flex-col min-h-screen`}
+        } transition-all duration-300 ease-in-out flex flex-col min-h-screen bg-[#f8f9ff] dark:bg-[#0b1120] text-slate-900 dark:text-slate-100`}
       >
         {/* Persistent Top Header */}
         <Header
@@ -543,6 +597,8 @@ export default function App() {
           searchQuery={searchQuery}
           ownerName={businessProfile.ownerName}
           ownerRole={businessProfile.role}
+          avatarUrl={businessProfile.avatarUrl || businessProfile.logoUrl}
+          onUpdateAvatar={(url) => setBusinessProfile((prev) => ({ ...prev, avatarUrl: url }))}
           onSelectTab={handleSelectTab}
           isSidebarCollapsed={isSidebarCollapsed}
           onToggleSidebar={handleToggleSidebar}
@@ -552,6 +608,8 @@ export default function App() {
           onOpenQuote={handleOpenQuoteFromSearch}
           onOpenInvoice={handleOpenInvoiceFromSearch}
           onOpenCustomer={handleOpenCustomerFromSearch}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
         />
 
         {/* View Routing */}
@@ -576,7 +634,7 @@ export default function App() {
               onUpdateValidUntil={setActiveQuoteValidUntil}
               onSaveQuotation={handleSaveQuotation}
               onSendWhatsApp={handleSendWhatsAppForCurrent}
-              onFinalizeInvoice={handleFinalizeInvoice}
+              onFinalizeInvoice={(q) => handleFinalizeInvoice(q)}
             />
           )}
 
@@ -661,6 +719,8 @@ export default function App() {
               invoices={invoices}
               businessProfile={businessProfile}
               searchQuery={searchQuery}
+              initialSelectedInvoiceId={focusedInvoiceId}
+              onClearInitialSelectedInvoice={() => setFocusedInvoiceId(null)}
               onAddPayment={handleAddPayment}
               onDeletePayment={handleDeletePayment}
               onUpdateInvoice={handleUpdateInvoice}
@@ -677,6 +737,11 @@ export default function App() {
               quotations={quotations}
               invoices={invoices}
               customers={customers}
+              theme={theme}
+              onSelectTheme={(t) => {
+                setTheme(t);
+                applyTheme(t);
+              }}
               onUpdateProfile={(p) => {
                 setBusinessProfile(p);
                 showToast('Shop Profile and Settings updated!');
@@ -699,8 +764,17 @@ export default function App() {
           items={quoteToPrint.items}
           extraCharges={quoteToPrint.extraCharges}
           profile={businessProfile}
+          defaultTemplate={appSettings.quotation.defaultTemplate}
         />
       )}
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <LanguageProvider>
+      <AppContent />
+    </LanguageProvider>
   );
 }

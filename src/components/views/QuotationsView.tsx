@@ -9,6 +9,7 @@ import {
   MessageSquare,
   Trash2,
   ArrowRight,
+  Receipt,
   Copy,
   AlertCircle,
 } from 'lucide-react';
@@ -241,11 +242,11 @@ export const QuotationsView: React.FC<QuotationsViewProps> = ({
                         {quote.status !== 'invoiced' && (
                           <button
                             onClick={() => onConvertToInvoice(quote)}
-                            className="p-1.5 text-purple-600 hover:text-purple-800 hover:bg-purple-50 rounded transition-colors cursor-pointer"
-                            title="Convert to Invoice"
+                            className="p-1.5 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded transition-colors cursor-pointer"
+                            title="Create GST Invoice"
                             type="button"
                           >
-                            <ArrowRight className="w-4 h-4" />
+                            <Receipt className="w-4 h-4" />
                           </button>
                         )}
 
