@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   Save,
   Info,
+  Truck,
 } from 'lucide-react';
 
 interface CustomerModalProps {
@@ -47,6 +48,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
   const [address, setAddress] = useState('');
   const [city, setCity] = useState('Noida');
   const [stateName, setStateName] = useState('Uttar Pradesh');
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [shippingCity, setShippingCity] = useState('Noida');
+  const [sameAsBilling, setSameAsBilling] = useState(true);
   const [gstin, setGstin] = useState('');
   const [saveToGstRegistry, setSaveToGstRegistry] = useState(true);
   const [directorySearch, setDirectorySearch] = useState('');
@@ -146,6 +150,9 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
       address: address.trim() || 'Site Address Pending',
       city: city.trim() || 'Noida',
       gstin: trimmedGst,
+      shippingAddress: sameAsBilling ? address.trim() : (shippingAddress.trim() || address.trim()),
+      shippingCity: sameAsBilling ? city.trim() : (shippingCity.trim() || city.trim()),
+      sameAsBilling,
     };
 
     // If GSTIN provided and user wants to save to local registry, store it persistently
@@ -508,14 +515,67 @@ export const CustomerModal: React.FC<CustomerModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="font-bold text-slate-800 block mb-1">Site / Registered Address</label>
+                  <label className="font-bold text-slate-800 block mb-1">Billing / Registered Address</label>
                   <textarea
                     rows={2}
                     placeholder="Sector / Road / Building, City, State"
                     className="w-full p-2.5 rounded-lg border border-slate-300 font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600 text-xs"
                     value={address}
-                    onChange={(e) => setAddress(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAddress(val);
+                      if (sameAsBilling) setShippingAddress(val);
+                    }}
                   />
+                </div>
+
+                {/* Shipping Option */}
+                <div className="pt-2 border-t border-slate-200">
+                  <div className="flex items-center justify-between mb-1.5">
+                    <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                      <Truck className="w-3.5 h-3.5 text-blue-700" />
+                      <span>Shipping / Delivery Address</span>
+                    </span>
+                    <label className="flex items-center gap-1.5 text-xs font-semibold text-blue-800 cursor-pointer bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 select-none transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={sameAsBilling}
+                        onChange={(e) => {
+                          const checked = e.target.checked;
+                          setSameAsBilling(checked);
+                          if (checked) {
+                            setShippingAddress(address);
+                            setShippingCity(city);
+                          }
+                        }}
+                        className="w-3.5 h-3.5 rounded text-blue-600"
+                      />
+                      <span>Same as billing address</span>
+                    </label>
+                  </div>
+
+                  {!sameAsBilling ? (
+                    <div className="space-y-2 pt-1 animate-in fade-in">
+                      <textarea
+                        rows={2}
+                        placeholder="Site Delivery Address"
+                        className="w-full p-2 rounded-lg border border-blue-300 bg-blue-50/20 text-slate-900 text-xs focus:ring-2 focus:ring-blue-600"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                      />
+                      <input
+                        type="text"
+                        placeholder="Shipping City"
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
+                        value={shippingCity}
+                        onChange={(e) => setShippingCity(e.target.value)}
+                      />
+                    </div>
+                  ) : (
+                    <div className="p-2 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-slate-600 text-[11px]">
+                      Destination: <strong className="text-slate-800">{address || 'Billing address'}, {city}</strong> (Same as billing)
+                    </div>
+                  )}
                 </div>
 
                 {/* Save to Local Persistent Registry Checkbox */}

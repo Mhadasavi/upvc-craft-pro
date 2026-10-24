@@ -14,6 +14,8 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
 } from 'lucide-react';
+import { ThemeMode } from '../../utils/theme';
+import { useLanguage } from '../../context/LanguageContext';
 
 export type NavTab =
   | 'dashboard'
@@ -32,6 +34,8 @@ interface SidebarProps {
   shopCity: string;
   isCollapsed?: boolean;
   onToggleCollapse?: () => void;
+  theme?: ThemeMode;
+  onToggleTheme?: () => void;
 }
 
 export const Sidebar: React.FC<SidebarProps> = ({
@@ -41,16 +45,20 @@ export const Sidebar: React.FC<SidebarProps> = ({
   shopCity,
   isCollapsed = false,
   onToggleCollapse,
+  theme = 'light',
+  onToggleTheme,
 }) => {
+  const { t } = useLanguage();
+
   const navItems = [
-    { id: 'dashboard' as NavTab, label: 'Dashboard', icon: LayoutDashboard },
-    { id: 'new-quotation' as NavTab, label: 'New Quotation', icon: FilePlus },
-    { id: 'create-invoice' as NavTab, label: 'Create Invoice', icon: Receipt },
-    { id: 'quotations' as NavTab, label: 'Quotations', icon: Files },
-    { id: 'invoices' as NavTab, label: 'Invoices & Payments', icon: CreditCard },
-    { id: 'customers' as NavTab, label: 'Customers', icon: Users },
-    { id: 'products-rates' as NavTab, label: 'Products & Rates', icon: Tags },
-    { id: 'settings' as NavTab, label: 'Settings', icon: Settings },
+    { id: 'dashboard' as NavTab, label: t('nav.dashboard'), icon: LayoutDashboard },
+    { id: 'new-quotation' as NavTab, label: t('nav.newQuotation'), icon: FilePlus },
+    { id: 'create-invoice' as NavTab, label: t('nav.createInvoice'), icon: Receipt },
+    { id: 'quotations' as NavTab, label: t('nav.quotations'), icon: Files },
+    { id: 'invoices' as NavTab, label: t('nav.invoices'), icon: CreditCard },
+    { id: 'customers' as NavTab, label: t('nav.customers'), icon: Users },
+    { id: 'products-rates' as NavTab, label: t('nav.productsRates'), icon: Tags },
+    { id: 'settings' as NavTab, label: t('nav.settings'), icon: Settings },
   ];
 
   return (

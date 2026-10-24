@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { QuotationItem, WorkshopCutItem } from '../../types';
 import { generateWorkshopCutList } from '../../utils/calculations';
 import { printDocument, downloadPrintableHtml } from '../../utils/printDocument';
-import { X, Printer, Copy, Check, Scissors, AlertCircle, Download, Loader2 } from 'lucide-react';
+import { X, Printer, Copy, Check, Scissors, AlertCircle, Download } from 'lucide-react';
 
 interface CutListModalProps {
   isOpen: boolean;
@@ -19,7 +19,6 @@ export const CutListModal: React.FC<CutListModalProps> = ({
 }) => {
   const [copied, setCopied] = useState(false);
   const [downloadSuccess, setDownloadSuccess] = useState(false);
-  const [printStatus, setPrintStatus] = useState<string | null>(null);
 
   if (!isOpen) return null;
 
@@ -95,16 +94,11 @@ export const CutListModal: React.FC<CutListModalProps> = ({
 
   const handlePrint = () => {
     const html = generateCutListHtml();
-    setPrintStatus('Opening Print...');
     const res = printDocument(html, `CutList-${quoteNumber}.html`);
     if (res.fallbackDownloaded) {
-      setPrintStatus('Downloaded Cut-List!');
       setDownloadSuccess(true);
       setTimeout(() => setDownloadSuccess(false), 2500);
-    } else {
-      setPrintStatus('Print Ready');
     }
-    setTimeout(() => setPrintStatus(null), 3000);
   };
 
   const handleDownload = () => {
@@ -172,15 +166,12 @@ export const CutListModal: React.FC<CutListModalProps> = ({
 
             <button
               onClick={handlePrint}
-              className="h-8 px-3 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-xs"
+              className="h-8 px-3 rounded-lg bg-blue-600 text-white text-xs font-bold flex items-center gap-1.5 hover:bg-blue-700 transition-colors shadow-xs cursor-pointer"
               type="button"
+              title="Print Cut-List or Save as PDF"
             >
-              {printStatus?.includes('Opening') ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Printer className="w-3.5 h-3.5" />
-              )}
-              <span>{printStatus || 'Print'}</span>
+              <Printer className="w-3.5 h-3.5" />
+              <span>Print Cut-List</span>
             </button>
 
             <button

@@ -30,6 +30,8 @@ interface InvoicesViewProps {
   invoices: Invoice[];
   businessProfile: BusinessProfile;
   searchQuery?: string;
+  initialSelectedInvoiceId?: string | null;
+  onClearInitialSelectedInvoice?: () => void;
   onAddPayment: (invoiceId: string, payment: PaymentRecord) => void;
   onDeletePayment: (invoiceId: string, paymentId: string) => void;
   onUpdateInvoice: (invoice: Invoice) => void;
@@ -42,6 +44,8 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   invoices,
   businessProfile,
   searchQuery: externalSearchQuery,
+  initialSelectedInvoiceId,
+  onClearInitialSelectedInvoice,
   onAddPayment,
   onDeletePayment,
   onUpdateInvoice,
@@ -50,9 +54,24 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
   onOpenCreateInvoice,
 }) => {
   const [selectedInvoice, setSelectedInvoice] = useState<Invoice | null>(null);
+  const [openInEditMode, setOpenInEditMode] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState(externalSearchQuery || '');
   const [statusFilter, setStatusFilter] = useState<'all' | 'paid' | 'partially_paid' | 'pending'>('all');
   const [invoiceToDelete, setInvoiceToDelete] = useState<Invoice | null>(null);
+
+  // Auto-open requested invoice (e.g. freshly generated from quotation)
+  useEffect(() => {
+    if (initialSelectedInvoiceId) {
+      const target = invoices.find((inv) => inv.id === initialSelectedInvoiceId);
+      if (target) {
+        setSelectedInvoice(target);
+        setOpenInEditMode(false);
+        if (onClearInitialSelectedInvoice) {
+          onClearInitialSelectedInvoice();
+        }
+      }
+    }
+  }, [initialSelectedInvoiceId, invoices, onClearInitialSelectedInvoice]);
 
   useEffect(() => {
     if (externalSearchQuery !== undefined) {
@@ -125,6 +144,7 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
 
   const handleRowClick = (inv: Invoice) => {
     setSelectedInvoice(inv);
+    setOpenInEditMode(false);
   };
 
   return (
@@ -313,13 +333,29 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
                       <div className="inline-flex items-center gap-1">
                         {/* Open Button */}
                         <button
-                          onClick={() => setSelectedInvoice(inv)}
+                          onClick={() => {
+                            setSelectedInvoice(inv);
+                            setOpenInEditMode(false);
+                          }}
                           className="px-2.5 py-1 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[11px] transition-colors flex items-center gap-1"
                           type="button"
                           title="Open Invoice in detail"
                         >
                           <Eye className="w-3.5 h-3.5" />
                           <span>Open</span>
+                        </button>
+
+                        {/* Edit Invoice Button */}
+                        <button
+                          onClick={() => {
+                            setSelectedInvoice(inv);
+                            setOpenInEditMode(true);
+                          }}
+                          className="p-1.5 text-slate-400 hover:text-blue-700 hover:bg-blue-50 rounded-lg transition-colors"
+                          type="button"
+                          title="Edit Invoice"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
                         </button>
 
                         {/* Record Payment quick action */}
@@ -404,12 +440,19 @@ export const InvoicesView: React.FC<InvoicesViewProps> = ({
           isOpen={true}
           invoice={activeModalInvoice}
           businessProfile={businessProfile}
-          onClose={() => setSelectedInvoice(null)}
-          onUpdateInvoice={onUpdateInvoice}
+          onClose={() => {
+            setSelectedInvoice(null);
+            setOpenInEditMode(false);
+          }}
+          onUpdateInvoice={(updated) => {
+            setSelectedInvoice(updated);
+            onUpdateInvoice(updated);
+          }}
           onDeleteInvoice={onDeleteInvoice}
           onAddPayment={onAddPayment}
           onDeletePayment={onDeletePayment}
           onDuplicateInvoice={onDuplicateInvoice}
+          initialEditMode={openInEditMode}
         />
       )}
 

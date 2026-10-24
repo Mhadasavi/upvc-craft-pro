@@ -31,7 +31,14 @@ import {
   Database,
   Download,
   RotateCcw,
+  Sun,
+  Moon,
+  Upload,
+  Camera,
+  Printer,
+  Languages,
 } from 'lucide-react';
+import { useLanguage } from '../../context/LanguageContext';
 import {
   formatQuotationNumber,
   getNextQuotationNumber,
@@ -41,6 +48,7 @@ import {
   getFinancialYearString,
 } from '../../utils/calculations';
 import { exportDatabaseBackup, clearAllStorageData } from '../../utils/storage';
+import { ThemeMode } from '../../utils/theme';
 
 type SettingsTab = 'quotation' | 'invoice' | 'product' | 'customer' | 'shop';
 
@@ -53,6 +61,8 @@ interface SettingsViewProps {
   onUpdateProfile: (p: BusinessProfile) => void;
   onUpdateAppSettings: (s: AppSettings) => void;
   initialTab?: SettingsTab;
+  theme?: ThemeMode;
+  onSelectTheme?: (t: ThemeMode) => void;
 }
 
 export const SettingsView: React.FC<SettingsViewProps> = ({
@@ -64,11 +74,14 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   onUpdateProfile,
   onUpdateAppSettings,
   initialTab = 'quotation',
+  theme = 'light',
+  onSelectTheme,
 }) => {
   const [activeTab, setActiveTab] = useState<SettingsTab>(initialTab);
   const [profileData, setProfileData] = useState<BusinessProfile>(profile);
   const [settingsData, setSettingsData] = useState<AppSettings>(appSettings);
   const [isSaved, setIsSaved] = useState(false);
+  const { language, setLanguage, t } = useLanguage();
 
   const handleExportBackup = () => {
     const jsonStr = exportDatabaseBackup();
@@ -100,6 +113,58 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
 
   const handleProfileChange = (field: keyof BusinessProfile, value: any) => {
     setProfileData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleCompanyLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds 5MB limit. Please choose a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const dataUrl = uploadEvent.target?.result as string;
+        if (dataUrl) {
+          const updated = { ...profileData, companyLogoUrl: dataUrl };
+          setProfileData(updated);
+          onUpdateProfile(updated);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveCompanyLogo = () => {
+    const updated = { ...profileData, companyLogoUrl: undefined };
+    setProfileData(updated);
+    onUpdateProfile(updated);
+  };
+
+  const handleUserAvatarUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert('File size exceeds 5MB limit. Please choose a smaller image.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onload = (uploadEvent) => {
+        const dataUrl = uploadEvent.target?.result as string;
+        if (dataUrl) {
+          const updated = { ...profileData, avatarUrl: dataUrl, logoUrl: dataUrl };
+          setProfileData(updated);
+          onUpdateProfile(updated);
+        }
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleRemoveUserAvatar = () => {
+    const updated = { ...profileData, avatarUrl: undefined, logoUrl: undefined };
+    setProfileData(updated);
+    onUpdateProfile(updated);
   };
 
   const handleQuotationSettingChange = (field: keyof AppSettings['quotation'], value: any) => {
@@ -202,11 +267,36 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
   );
 
   const navTabs = [
-    { id: 'quotation' as SettingsTab, label: 'Quotation Settings', icon: FileText, badge: 'Numbering & Dates' },
-    { id: 'invoice' as SettingsTab, label: 'Invoice & GST', icon: Receipt, badge: '18% GST / HSN' },
-    { id: 'product' as SettingsTab, label: 'Product & Rates', icon: Package, badge: 'Defaults & Specs' },
-    { id: 'customer' as SettingsTab, label: 'Customer Defaults', icon: Users, badge: 'City & WhatsApp' },
-    { id: 'shop' as SettingsTab, label: 'Shop Identity', icon: Building, badge: 'GSTIN & Bank' },
+    {
+      id: 'quotation' as SettingsTab,
+      label: language === 'hi' ? 'कोटेशन सेटिंग्स' : 'Quotation Settings',
+      icon: FileText,
+      badge: language === 'hi' ? 'क्रमांकन एवं तिथियां' : 'Numbering & Dates',
+    },
+    {
+      id: 'invoice' as SettingsTab,
+      label: language === 'hi' ? 'इनवॉइस एवं जीएसटी' : 'Invoice & GST',
+      icon: Receipt,
+      badge: language === 'hi' ? '18% जीएसटी / HSN' : '18% GST / HSN',
+    },
+    {
+      id: 'product' as SettingsTab,
+      label: language === 'hi' ? 'उत्पाद एवं दरें' : 'Product & Rates',
+      icon: Package,
+      badge: language === 'hi' ? 'डिफ़ॉल्ट विनिर्देश' : 'Defaults & Specs',
+    },
+    {
+      id: 'customer' as SettingsTab,
+      label: language === 'hi' ? 'ग्राहक डिफ़ॉल्ट्स' : 'Customer Defaults',
+      icon: Users,
+      badge: language === 'hi' ? 'शहर एवं व्हाट्सएप' : 'City & WhatsApp',
+    },
+    {
+      id: 'shop' as SettingsTab,
+      label: language === 'hi' ? 'दुकान की पहचान' : 'Shop Identity',
+      icon: Building,
+      badge: language === 'hi' ? 'जीएसटी एवं बैंक' : 'GSTIN & Bank',
+    },
   ];
 
   return (
@@ -216,10 +306,12 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
         <div>
           <div className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-blue-600" />
-            <h2 className="text-xl font-bold text-slate-900 tracking-tight">System &amp; Business Settings</h2>
+            <h2 className="text-xl font-bold text-slate-900 tracking-tight">{t('settings.title')}</h2>
           </div>
           <p className="text-xs text-slate-500 font-medium mt-0.5">
-            Configure quotation numbering schemes, calendar dates, invoice rules, product defaults, and shop details
+            {language === 'hi'
+              ? 'कोटेशन क्रमांकन, कैलेंडर तिथियां, इनवॉइस नियम, उत्पाद डिफ़ॉल्ट्स एवं दुकान विवरण कॉन्फ़िगर करें'
+              : 'Configure quotation numbering schemes, calendar dates, invoice rules, product defaults, and shop details'}
           </p>
         </div>
 
@@ -229,7 +321,11 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           type="button"
         >
           {isSaved ? <Check className="w-4 h-4 stroke-[3]" /> : <Save className="w-4 h-4" />}
-          <span>{isSaved ? 'All Settings Saved!' : 'Save Changes'}</span>
+          <span>
+            {isSaved
+              ? (language === 'hi' ? 'सभी सेटिंग्स सहेजी गईं!' : 'All Settings Saved!')
+              : (language === 'hi' ? 'बदलाव सहेजें' : 'Save Changes')}
+          </span>
         </button>
       </div>
 
@@ -613,6 +709,23 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                       className="w-full h-9 px-3 rounded-lg border border-slate-300 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                     />
                   </div>
+
+                  <div>
+                    <label className="font-bold text-slate-800 block mb-1 flex items-center gap-1.5">
+                      <Printer className="w-3.5 h-3.5 text-blue-600" />
+                      <span>Default Print Template</span>
+                    </label>
+                    <select
+                      value={settingsData.quotation.defaultTemplate || 'architectural'}
+                      onChange={(e) => handleQuotationSettingChange('defaultTemplate', e.target.value)}
+                      className="w-full h-9 px-3 rounded-lg border border-slate-300 font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    >
+                      <option value="architectural">📐 Architectural CAD Specification (Vector Elevations &amp; Dimensions)</option>
+                      <option value="compact">📋 Executive B2B Schedule (Dense Table for Contractors &amp; BOQs)</option>
+                      <option value="premium">✨ Luxury Client Proposal (Navy &amp; Gold Presentation with Badges)</option>
+                      <option value="workshop">🔨 Workshop Fabrication &amp; Site Slip (Cutting Specs &amp; Zero Pricing)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
 
@@ -793,6 +906,22 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                   <option value={14}>14 Days (Standard)</option>
                   <option value={30}>30 Days Net</option>
                   <option value={0}>Immediate Payment on Handover</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-slate-800 block mb-1 flex items-center gap-1.5">
+                  <Printer className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Default Invoice Print Template</span>
+                </label>
+                <select
+                  value={settingsData.invoice.defaultTemplate || 'standard'}
+                  onChange={(e) => handleInvoiceSettingChange('defaultTemplate', e.target.value)}
+                  className="w-full h-9 px-3 rounded-lg border border-slate-300 font-bold text-slate-900 bg-white focus:outline-none focus:ring-2 focus:ring-blue-600"
+                >
+                  <option value="standard">📄 Standard Official GST Tax Invoice (Statutory Layout)</option>
+                  <option value="compact">📋 Executive B2B Commercial Invoice (High-Density Corporate)</option>
+                  <option value="premium">✨ Luxury Branded Tax Bill (Emblem Banner &amp; Warranty Seal)</option>
                 </select>
               </div>
 
@@ -1096,7 +1225,134 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                 <h3 className="text-sm font-bold text-slate-900">Shop Identity &amp; Tax Registration</h3>
               </div>
 
-              <div className="flex flex-col gap-3">
+              <div className="flex flex-col gap-4">
+                {/* 1. Official Company Logo (For Print & Invoices) */}
+                <div className="p-4 rounded-xl bg-blue-50/40 dark:bg-blue-950/20 border border-blue-200/80 dark:border-blue-900/50 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative group shrink-0">
+                    <div className="w-20 h-16 rounded-xl bg-white dark:bg-slate-900 border-2 border-dashed border-blue-300 dark:border-blue-700 flex items-center justify-center overflow-hidden shadow-xs">
+                      {profileData.companyLogoUrl ? (
+                        <img
+                          src={profileData.companyLogoUrl}
+                          alt="Company Logo"
+                          className="w-full h-full object-contain p-1"
+                        />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-blue-500 text-center p-1">
+                          <Building className="w-5 h-5 opacity-70 mb-0.5" />
+                          <span className="text-[9.5px] font-bold uppercase tracking-wider">No Logo</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 text-center sm:text-left min-w-0">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5">
+                      <h4 className="text-xs font-bold text-slate-900 dark:text-slate-100">
+                        Company Logo / Brand Emblem
+                      </h4>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-blue-100 text-blue-800 dark:bg-blue-500/20 dark:text-blue-300">
+                        Prints on Documents
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+                      {profileData.companyLogoUrl
+                        ? 'Official company emblem active. Printed on all quotation sheets, bills, and PDF downloads.'
+                        : 'Upload your fabrication shop emblem or brand logo. This will be printed on all Quotations, Tax Invoices, and PDFs.'}
+                    </p>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                      <label className="h-8 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{profileData.companyLogoUrl ? 'Change Company Logo' : 'Upload Company Logo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleCompanyLogoUpload}
+                        />
+                      </label>
+
+                      {profileData.companyLogoUrl && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveCompanyLogo}
+                          className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Remove company logo from printed documents"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* 2. User Profile Picture (In-App Only) */}
+                <div className="p-4 rounded-xl bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center gap-4">
+                  <div className="relative group shrink-0">
+                    <div className="w-14 h-14 rounded-full bg-blue-600 text-white flex items-center justify-center font-bold text-lg shadow-md overflow-hidden border-2 border-white dark:border-slate-700">
+                      {profileData.avatarUrl || profileData.logoUrl ? (
+                        <img
+                          src={profileData.avatarUrl || profileData.logoUrl}
+                          alt={profileData.ownerName || 'User Avatar'}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        profileData.ownerName
+                          .split(' ')
+                          .map((n) => n[0])
+                          .join('')
+                          .toUpperCase() || 'SB'
+                      )}
+                    </div>
+                  </div>
+
+                  <div className="flex-1 text-center sm:text-left min-w-0">
+                    <div className="flex items-center justify-center sm:justify-start gap-1.5 mb-0.5">
+                      <h4 className="text-xs font-bold text-slate-800 dark:text-slate-200">
+                        User Profile Picture
+                      </h4>
+                      <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-slate-200 text-slate-700 dark:bg-slate-800 dark:text-slate-300">
+                        In-App Only
+                      </span>
+                    </div>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2.5">
+                      {profileData.avatarUrl || profileData.logoUrl
+                        ? 'Displays in the top blue navigation circle. Never printed on quotations or bills.'
+                        : 'Currently displaying initials (' +
+                          (profileData.ownerName
+                            .split(' ')
+                            .map((n) => n[0])
+                            .join('')
+                            .toUpperCase() || 'SB') +
+                          '). Visible only in the app header, never printed on customer documents.'}
+                    </p>
+                    <div className="flex items-center justify-center sm:justify-start gap-2 flex-wrap">
+                      <label className="h-8 px-3 rounded-lg bg-slate-800 hover:bg-slate-700 text-white font-semibold text-xs flex items-center gap-1.5 cursor-pointer shadow-xs transition-colors">
+                        <Upload className="w-3.5 h-3.5" />
+                        <span>{profileData.avatarUrl || profileData.logoUrl ? 'Change Photo' : 'Upload Photo'}</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleUserAvatarUpload}
+                        />
+                      </label>
+
+                      {(profileData.avatarUrl || profileData.logoUrl) && (
+                        <button
+                          type="button"
+                          onClick={handleRemoveUserAvatar}
+                          className="h-8 px-2.5 rounded-lg border border-slate-300 dark:border-slate-700 hover:bg-red-50 dark:hover:bg-red-950/30 text-slate-600 dark:text-slate-400 hover:text-red-600 text-xs font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                          title="Remove photo and revert to initials in app"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          <span>Remove</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="font-bold text-slate-800 block mb-1">Fabrication Shop Name</label>
                   <input
@@ -1215,6 +1471,149 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
                     onChange={(e) => handleProfileChange('upiId', e.target.value)}
                   />
                 </div>
+              </div>
+            </div>
+
+            {/* Visual Theme & Appearance Card */}
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col gap-4 lg:col-span-2">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  {theme === 'dark' ? <Moon className="w-4 h-4 text-blue-500" /> : <Sun className="w-4 h-4 text-amber-500" />}
+                  <h3 className="text-sm font-bold text-slate-900">Application Theme &amp; Visual Appearance</h3>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  Currently active: <strong className="text-blue-600 uppercase">{theme} Mode</strong>
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                Choose your preferred workspace display mode. You can also toggle light/dark mode at any time using the button in the top header or the bottom of the sidebar.
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <button
+                  type="button"
+                  onClick={() => onSelectTheme && onSelectTheme('light')}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer ${
+                    theme === 'light'
+                      ? 'border-blue-600 bg-blue-50/50 shadow-xs ring-2 ring-blue-600/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-amber-100 text-amber-700 shrink-0">
+                    <Sun className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">Light Mode</span>
+                      {theme === 'light' && (
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded font-mono">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      Clean high-contrast interface tailored for bright daytime workshop offices and estimation.
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => onSelectTheme && onSelectTheme('dark')}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer ${
+                    theme === 'dark'
+                      ? 'border-blue-500 bg-slate-800 text-white shadow-xs ring-2 ring-blue-500/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-slate-800 text-blue-400 shrink-0 border border-slate-700">
+                    <Moon className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">Dark Mode</span>
+                      {theme === 'dark' && (
+                        <span className="text-[10px] font-bold text-blue-400 bg-blue-950 px-1.5 py-0.2 rounded font-mono">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      Deep navy workspace reducing glare and eye strain during evening fabrication management.
+                    </p>
+                  </div>
+                </button>
+              </div>
+            </div>
+
+            {/* Application Language / भाषा Card */}
+            <div className="bg-white rounded-xl p-5 border border-slate-200 shadow-xs flex flex-col gap-4 lg:col-span-2">
+              <div className="flex items-center justify-between pb-2 border-b border-slate-100">
+                <div className="flex items-center gap-2">
+                  <Languages className="w-4 h-4 text-blue-600" />
+                  <h3 className="text-sm font-bold text-slate-900">{t('settings.languageTitle')}</h3>
+                </div>
+                <span className="text-[11px] font-semibold text-slate-500">
+                  {language === 'hi' ? 'वर्तमान में सक्रिय: ' : 'Currently active: '}
+                  <strong className="text-blue-600 uppercase">{language === 'hi' ? 'हिंदी (Hindi)' : 'English'}</strong>
+                </span>
+              </div>
+              <p className="text-xs text-slate-500">
+                {t('settings.languageDesc')}
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-1">
+                <button
+                  type="button"
+                  onClick={() => setLanguage('en')}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer ${
+                    language === 'en'
+                      ? 'border-blue-600 bg-blue-50/50 shadow-xs ring-2 ring-blue-600/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-blue-100 text-blue-700 shrink-0 font-bold font-mono text-xs">
+                    EN
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">English</span>
+                      {language === 'en' && (
+                        <span className="text-[10px] font-bold text-blue-700 bg-blue-100 px-1.5 py-0.2 rounded font-mono">
+                          Active
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      {t('settings.langEnDesc')}
+                    </p>
+                  </div>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setLanguage('hi')}
+                  className={`p-4 rounded-xl border text-left transition-all flex items-start gap-3.5 cursor-pointer ${
+                    language === 'hi'
+                      ? 'border-blue-600 bg-amber-50/50 shadow-xs ring-2 ring-amber-500/20'
+                      : 'border-slate-200 hover:border-slate-300 bg-white'
+                  }`}
+                >
+                  <div className="p-2.5 rounded-lg bg-amber-100 text-amber-800 shrink-0 font-bold font-mono text-xs">
+                    हिं
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold text-slate-900 text-sm">हिंदी (Hindi)</span>
+                      {language === 'hi' && (
+                        <span className="text-[10px] font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded font-mono">
+                          सक्रिय (Active)
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-relaxed">
+                      {t('settings.langHiDesc')}
+                    </p>
+                  </div>
+                </button>
               </div>
             </div>
           </form>

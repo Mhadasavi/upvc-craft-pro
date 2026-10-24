@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Customer, Invoice, Quotation } from '../../types';
 import { formatINR } from '../../utils/calculations';
 import {
@@ -20,6 +20,7 @@ import {
   AlertCircle,
   Save,
   User,
+  Truck,
 } from 'lucide-react';
 
 interface CustomerDetailModalProps {
@@ -61,6 +62,34 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
   const [city, setCity] = useState(customer.city);
   const [gstin, setGstin] = useState(customer.gstin || '');
   const [email, setEmail] = useState(customer.email || '');
+  const [shippingAddress, setShippingAddress] = useState(
+    customer.shippingAddress || customer.address
+  );
+  const [shippingCity, setShippingCity] = useState(
+    customer.shippingCity || customer.city
+  );
+  const [sameAsBilling, setSameAsBilling] = useState<boolean>(
+    customer.sameAsBilling !== undefined
+      ? customer.sameAsBilling
+      : (!customer.shippingAddress || customer.shippingAddress === customer.address)
+  );
+
+  useEffect(() => {
+    setName(customer.name);
+    setCompanyName(customer.companyName || '');
+    setMobile(customer.mobile);
+    setAddress(customer.address);
+    setCity(customer.city);
+    setGstin(customer.gstin || '');
+    setEmail(customer.email || '');
+    setShippingAddress(customer.shippingAddress || customer.address);
+    setShippingCity(customer.shippingCity || customer.city);
+    setSameAsBilling(
+      customer.sameAsBilling !== undefined
+        ? customer.sameAsBilling
+        : (!customer.shippingAddress || customer.shippingAddress === customer.address)
+    );
+  }, [customer]);
 
   if (!isOpen) return null;
 
@@ -99,6 +128,9 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
       city: city.trim() || 'Pune',
       gstin: gstin.trim() || undefined,
       email: email.trim() || undefined,
+      shippingAddress: sameAsBilling ? address.trim() : (shippingAddress.trim() || address.trim()),
+      shippingCity: sameAsBilling ? city.trim() : (shippingCity.trim() || city.trim()),
+      sameAsBilling,
     });
 
     setIsEditing(false);
@@ -251,15 +283,88 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                 </div>
               </div>
 
-              <div>
-                <label className="font-bold text-slate-800 block mb-1 text-xs">Installation / Site Address</label>
-                <input
-                  type="text"
-                  placeholder="Full site location with building & street details"
-                  className="w-full h-9 px-3 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1 text-xs">Billing Address</label>
+                  <input
+                    type="text"
+                    placeholder="Registered Billing Address"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    value={address}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setAddress(val);
+                      if (sameAsBilling) setShippingAddress(val);
+                    }}
+                  />
+                </div>
+                <div>
+                  <label className="font-bold text-slate-800 block mb-1 text-xs">Billing City</label>
+                  <input
+                    type="text"
+                    placeholder="City"
+                    className="w-full h-9 px-3 rounded-lg border border-slate-300 bg-white text-xs font-medium text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                    value={city}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setCity(val);
+                      if (sameAsBilling) setShippingCity(val);
+                    }}
+                  />
+                </div>
+              </div>
+
+              {/* Shipping Address Option */}
+              <div className="pt-2 border-t border-slate-200">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
+                    <Truck className="w-3.5 h-3.5 text-blue-700" />
+                    <span>Shipping / Site Address</span>
+                  </span>
+                  <label className="flex items-center gap-1.5 text-xs font-semibold text-blue-800 cursor-pointer bg-blue-50 px-2 py-0.5 rounded border border-blue-200 select-none">
+                    <input
+                      type="checkbox"
+                      checked={sameAsBilling}
+                      onChange={(e) => {
+                        const checked = e.target.checked;
+                        setSameAsBilling(checked);
+                        if (checked) {
+                          setShippingAddress(address);
+                          setShippingCity(city);
+                        }
+                      }}
+                      className="w-3.5 h-3.5 rounded text-blue-600"
+                    />
+                    <span>Same as billing address</span>
+                  </label>
+                </div>
+
+                {!sameAsBilling ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 animate-in fade-in">
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Site Delivery Address"
+                        className="w-full h-8 px-2.5 rounded-lg border border-blue-300 bg-blue-50/20 text-xs text-slate-900"
+                        value={shippingAddress}
+                        onChange={(e) => setShippingAddress(e.target.value)}
+                      />
+                    </div>
+                    <div>
+                      <input
+                        type="text"
+                        placeholder="Shipping City"
+                        className="w-full h-8 px-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
+                        value={shippingCity}
+                        onChange={(e) => setShippingCity(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-2 bg-slate-50 rounded-lg border border-dashed border-slate-200 text-slate-600 text-[11px]">
+                    Delivery: <strong className="text-slate-800">{address || 'Billing address'}, {city}</strong> (Same as billing)
+                  </div>
+                )}
               </div>
 
               <div className="flex justify-end gap-2 pt-2 border-t border-blue-200/60">
@@ -321,7 +426,7 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                     <MapPin className="w-4 h-4" />
                   </div>
                   <div className="flex flex-col min-w-0">
-                    <span className="text-[11px] text-slate-500 font-semibold">Location</span>
+                    <span className="text-[11px] text-slate-500 font-semibold">Billing Location</span>
                     <span className="font-semibold text-slate-900 truncate" title={`${customer.address}, ${customer.city}`}>
                       {customer.city} • {customer.address}
                     </span>
@@ -340,6 +445,21 @@ export const CustomerDetailModal: React.FC<CustomerDetailModalProps> = ({
                   </div>
                 </div>
               </div>
+
+              {customer.shippingAddress && customer.shippingAddress !== customer.address && (
+                <div className="p-2.5 bg-blue-50/70 rounded-xl border border-blue-200/60 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2">
+                    <Truck className="w-4 h-4 text-blue-700 shrink-0" />
+                    <div>
+                      <span className="font-bold text-slate-800">Site Delivery Address: </span>
+                      <span className="text-slate-700">{customer.shippingAddress}, {customer.shippingCity || customer.city}</span>
+                    </div>
+                  </div>
+                  <span className="text-[10px] bg-blue-100 text-blue-800 font-bold px-1.5 py-0.5 rounded">
+                    Separate Site
+                  </span>
+                </div>
+              )}
 
               {/* Financial Metrics Cards */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">

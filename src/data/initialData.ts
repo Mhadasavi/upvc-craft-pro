@@ -267,6 +267,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     city: 'Pune',
     gstin: '27AABCS1429B1Z',
     email: 'amit.sharma@gmail.com',
+    shippingAddress: 'Flat 402, Sharma Residency, Near Balewadi High Street, Baner',
+    shippingCity: 'Pune',
+    sameAsBilling: true,
   },
   {
     id: 'cust-2',
@@ -276,16 +279,22 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Plot 12, Pradhikaran, Sector 26, Nigdi',
     city: 'Pune',
     email: 'rkulkarni.pune@gmail.com',
+    shippingAddress: 'Plot 12, Pradhikaran, Sector 26, Nigdi',
+    shippingCity: 'Pune',
+    sameAsBilling: true,
   },
   {
     id: 'cust-3',
     name: 'Pooja Mehta',
     companyName: 'Mehta Developers',
     mobile: '+91 98901 12345',
-    address: 'Site 8A, Kharadi IT Corridor',
+    address: 'Corporate Towers, Phase 1, Hinjewadi',
     city: 'Pune',
     gstin: '27AACCM9988D1Z',
     email: 'procurement@mehtabuilders.in',
+    shippingAddress: 'Tower B Construction Site, Sector 8A, Kharadi IT Corridor',
+    shippingCity: 'Pune',
+    sameAsBilling: false,
   },
   {
     id: 'cust-4',
@@ -294,6 +303,9 @@ export const INITIAL_CUSTOMERS: Customer[] = [
     address: 'Bungalow 7, Sindh Society, Aundh',
     city: 'Pune',
     email: 'sunil.desh@outlook.com',
+    shippingAddress: 'Bungalow 7, Sindh Society, Aundh',
+    shippingCity: 'Pune',
+    sameAsBilling: true,
   },
 ];
 
@@ -606,6 +618,7 @@ export const INITIAL_RATE_SHEET: RateSheetItem[] = [
   { id: 'r14', typologyId: 'upvc-louver-vent', name: 'UPVC Louvered Ventilator', baseRatePerSqFt: 350, category: 'ventilators' },
   { id: 'r15', typologyId: 'top-hung-vent', name: 'Top Hung Ventilator', baseRatePerSqFt: 410, category: 'ventilators' },
   { id: 'r16', typologyId: 'fixed-glass-partition', name: 'Fixed Glass Partition', baseRatePerSqFt: 380, category: 'custom' },
+  { id: 'r17', typologyId: 'custom-upvc-product', name: 'Custom UPVC Product', baseRatePerSqFt: 450, category: 'custom' },
 ];
 
 export const INITIAL_APP_SETTINGS: AppSettings = {
@@ -618,6 +631,7 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
     defaultDeliveryTimeline: '10 to 14 Working Days from advance clearance',
     defaultPaymentTerms: '50% Advance with PO, 40% On material dispatch, 10% Upon completion',
     defaultNotes: 'Profile Extrusions manufactured in accordance with DIN EN 12608 Class A standards. 10-year warranty against warping and discoloration.',
+    defaultTemplate: 'architectural',
   },
   invoice: {
     numberFormat: 'calendar-year',
@@ -628,6 +642,7 @@ export const INITIAL_APP_SETTINGS: AppSettings = {
     defaultGstRate: 18,
     hsnCode: '76101000',
     declaration: 'We declare that this invoice shows the actual price of the goods described and that all particulars are true and correct.',
+    defaultTemplate: 'standard',
   },
   product: {
     defaultUnit: 'in',
